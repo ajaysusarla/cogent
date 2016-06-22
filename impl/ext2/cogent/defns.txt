@@ -47,3 +47,8 @@ fs_unmount
 -- vfs_inode_get
 -- vfs_inode_bad_taken
 -- vfs_inode_add_dirty_osbuffer
+
+get_Ext2DirEnt_record_length
+get_Ext2DirEnt_name
+get_Ext2DirEnt_inode
+inspect_Ext2DirEnt2

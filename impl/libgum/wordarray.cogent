@@ -139,6 +139,11 @@ wordarray_fold_no_break: all(a :< DSE,acc,obsv). WordArrayFoldNoBreakP a acc obs
 {-# fnmacro wordarray_cmp #-}
 wordarray_cmp: ((WordArray U8)!, (WordArray U8)!) -> Bool
 
+{-# cinline wordarray_cmp_opt #-}
+{-# fnmacro wordarray_cmp_opt #-}
+-- the 2nd argument is an address to (WordArray U8) / zilinc
+wordarray_cmp_opt: ((WordArray U8)!, U32) -> Bool
+
 -- haystack, needles, offset
 type WordArrayFindSubP a = ((WordArray a)!, (WordArray a)!, U32)
 type FindResult = <Found WordArrayIndex | NotFound () >

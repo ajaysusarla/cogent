@@ -135,7 +135,7 @@ check_dirent_empty (#{ obj = new_dirent, acc = (ex, maybe_prev_dirent, pagebuf, 
         -- replace prev dirent with new one in accumulator
         let increment = u16_to_u32 (ext2_rec_len_from_disk (new_dirent.record_length)) !new_dirent
         and offset = offset + increment
-        
+
         in maybe_prev_dirent
         | Some prev_dirent ->
             let ex = destroy_Ext2DirEnt (ex, prev_dirent)
@@ -149,13 +149,13 @@ type PerPageEmptyObsv = (U64, VfsInode)
 get_page_and_check_empty: Seq64_body PerPageEmptyAcc PerPageEmptyObsv U32
 get_page_and_check_empty (#{acc = (ex), obsv = (npages, inode), idx = n}) =
     let _ = _cogent_log (dbg_EXT2_DIR_READ, "get_page_and_check_empty: page ")
-    and _ = _cogent_log_u64 (dbg_EXT2_DIR_READ,  n) 
-    and _ = _cogent_log (dbg_EXT2_DIR_READ, "\n") 
+    and _ = _cogent_log_u64 (dbg_EXT2_DIR_READ,  n)
+    and _ = _cogent_log (dbg_EXT2_DIR_READ, "\n")
     in ospagecache_read (vfs_inode_get_mapping (inode), n) !inode
     | Success (page) =>
         ospage_map (page)
         | Success (page, kaddr) =>
-            let (ex, res) = deserialise_Ext2DirEnt2 (ex, kaddr, 0) !kaddr 
+            let (ex, res) = deserialise_Ext2DirEnt2 (ex, kaddr, 0) !kaddr
             in res
             | Success (dirent, _) ->
                 let limit = ext2_last_byte (inode, n) - u16_to_u64 (ext2_dir_rec_len (1)) !inode
@@ -335,13 +335,13 @@ type CheckMatchingDirentAcc = (ExState, FsState, U64, U64)
 type CheckMatchingDirentObsv = (CString, U64, OSPageBuffer)
 
 -- inner loop at dir.c:396
-get_next_dirent_from_page2: Generator Ext2DirEnt (Option Ext2DirEnt) U32 CheckMatchingDirentAcc CheckMatchingDirentObsv 
-get_next_dirent_from_page2(#{acc = (ex, state, offset, prev_offset), obsv = (name, offset_end, pagebuf)}) = 
+get_next_dirent_from_page2: Generator Ext2DirEnt (Option Ext2DirEnt) U32 CheckMatchingDirentAcc CheckMatchingDirentObsv
+get_next_dirent_from_page2(#{acc = (ex, state, offset, prev_offset), obsv = (name, offset_end, pagebuf)}) =
     if offset <= offset_end then
         let (ex, res) = deserialise_Ext2DirEnt2 (ex, pagebuf, u64_to_u32 offset) -- XXX: shouldn't downcast
         and _ = _cogent_log (dbg_EXT2_DIR_READ, "get_next_dirent_from_page2: deserialising dirent @ offset ")
         and _ = _cogent_log_u64 (dbg_EXT2_DIR_READ, offset)
-        and _ = _cogent_log (dbg_EXT2_DIR_READ, "\n") 
+        and _ = _cogent_log (dbg_EXT2_DIR_READ, "\n")
         in res
         | Success (dirent, _) ->
             let new_offset = offset + u16_to_u64 (ext2_rec_len_from_disk (dirent.record_length)) !dirent
@@ -354,7 +354,7 @@ get_next_dirent_from_page2(#{acc = (ex, state, offset, prev_offset), obsv = (nam
         ((ex, state, offset, prev_offset), Return (None ()))
 
 check_matching_and_increment: Consumer Ext2DirEnt (Option Ext2DirEnt) U32 CheckMatchingDirentAcc CheckMatchingDirentObsv
-check_matching_and_increment(#{ obj = de, acc = (ex, state, offset, prev_offset), obsv = (name, offset_end, pagebuf)}) = 
+check_matching_and_increment(#{ obj = de, acc = (ex, state, offset, prev_offset), obsv = (name, offset_end, pagebuf)}) =
     let de_reclen = de.record_length !de
     in if de_reclen /= 0 then
         let matched = ext2_match (name, de) !de
@@ -367,6 +367,34 @@ check_matching_and_increment(#{ obj = de, acc = (ex, state, offset, prev_offset)
         let ex = destroy_Ext2DirEnt (ex, de) -- FIXME: should use state
         and _ = _cogent_log (dbg_EXT2_DIR_READ, "check_matching_and_increment: zero-length dir\n")
         in ((ex, state, offset, prev_offset), Stop eInval)
+
+-- inner loop at dir.c:396
+loop_dirent_in_page : Generator () (Option U32) U32 CheckMatchingDirentAcc CheckMatchingDirentObsv
+loop_dirent_in_page (#{acc = (ex, state, offset, prev_offset), obsv = (name, offset_end, pagebuf)}) =
+    if offset <= offset_end then
+        let p_dirent = inspect_Ext2DirEnt2 (pagebuf, u64_to_u32 offset) -- XXX: shouldn't downcast
+        and _ = _cogent_log (dbg_EXT2_DIR_READ, "loop_dirent_in_page: inspecting dirent @ offset ")
+        and _ = _cogent_log_u64 (dbg_EXT2_DIR_READ, offset)
+        and _ = _cogent_log (dbg_EXT2_DIR_READ, "\n")
+        and de_reclen = get_Ext2DirEnt_record_length (p_dirent)
+        and new_offset = offset + u16_to_u64 (ext2_rec_len_from_disk de_reclen)
+        in if de_reclen /= 0 then
+            let matched = ext2_match_opt (name, get_Ext2DirEnt_inode (p_dirent), get_Ext2DirEnt_name (p_dirent))
+            in if matched then
+                ((ex, state, new_offset, offset), Return (Some (get_Ext2DirEnt_inode (p_dirent))))
+            else
+                ((ex, state, new_offset, offset), Yield ())
+        else
+            let _ = _cogent_log (dbg_EXT2_DIR_READ, "loop_dirent_in_page: zero-length dir\n")
+            in ((ex, state, new_offset, offset), Stop eInval)
+
+    else
+        -- got to end of page
+        ((ex, state, offset, prev_offset), Return (None ()))
+
+loop_dirent_in_page2 : Consumer () (Option U32) U32 CheckMatchingDirentAcc CheckMatchingDirentObsv
+loop_dirent_in_page2 (#{ obj, acc, obsv}) =
+  (acc, Next ())
 
 type FindEntryAcc = (ExState, FsState, U64)
 type FindEntryObsv = (CString, VfsInode, U16, U64, U64)
@@ -389,9 +417,9 @@ get_next_page (#{acc = (ex, state, n), obsv = (name, dir, _, _, _)}) =
 
 check_page_loop: Consumer (OSPage, OSPageBuffer) (Ext2DirEnt, OSPage, OSPageBuffer, U64) U32 FindEntryAcc FindEntryObsv
 check_page_loop (#{obj = (page, pagebuf), acc = (ex, state, n), obsv = (name, dir, reclen, npages, start)}) =
-    let _ = _cogent_log (dbg_EXT2_DIR_READ, "check_page_loop: at page ") 
-    and _ = _cogent_log_u64 (dbg_EXT2_DIR_READ, n) 
-    and _ = _cogent_log (dbg_EXT2_DIR_READ, "\n") 
+    let _ = _cogent_log (dbg_EXT2_DIR_READ, "check_page_loop: at page ")
+    and _ = _cogent_log_u64 (dbg_EXT2_DIR_READ, n)
+    and _ = _cogent_log (dbg_EXT2_DIR_READ, "\n")
     and offset_end = ext2_last_byte (dir, n) - u16_to_u64 reclen
 
     -- inner loop at line 396
@@ -409,7 +437,7 @@ check_page_loop (#{obj = (page, pagebuf), acc = (ex, state, n), obsv = (name, di
         maybe_de
         | Some de ->
             let _ = _cogent_log (dbg_EXT2_DIR_READ, "check_page_loop: had dirent at offset ")
-            and _ = _cogent_log_u64 (dbg_EXT2_DIR_READ, prev_offset) 
+            and _ = _cogent_log_u64 (dbg_EXT2_DIR_READ, prev_offset)
             and _ = _cogent_log (dbg_EXT2_DIR_READ, "\n")
             in ((ex, state, n), Return (de, page, pagebuf, prev_offset))
         | None _ ->
@@ -445,13 +473,92 @@ check_page_loop (#{obj = (page, pagebuf), acc = (ex, state, n), obsv = (name, di
         and _ = ospagecache_release (page)
 
         in ((ex, state, n), Stop err)
-    
+
+
+get_next_page_opt: Generator (OSPage, OSPageBuffer) (U32, OSPage, OSPageBuffer, U64) U32 FindEntryAcc FindEntryObsv
+get_next_page_opt (#{acc = (ex, state, n), obsv = (name, dir, _, _, _)}) =
+    ospagecache_read (vfs_inode_get_mapping (dir), n)
+    | Success (page) ->
+        ospage_map (page)
+        | Success (page, kaddr) ->
+            ((ex, state, n), Yield (page, kaddr))
+        | Error (page) ->
+            let _ = ospagecache_release (page)
+
+            and _ = _cogent_log (dbg_EXT2_DIR_READ, "get_next_page: failed to map\n")
+            in ((ex, state, n), Stop eIO)
+    | Error () ->
+        let _ = _cogent_log (dbg_EXT2_DIR_READ, "get_next_page: could not get page\n")
+        in ((ex, state, n), Stop eIO)
+
+
+check_page_loop_opt: Consumer (OSPage, OSPageBuffer) (U32, OSPage, OSPageBuffer, U64) U32 FindEntryAcc FindEntryObsv
+check_page_loop_opt (#{obj = (page, pagebuf), acc = (ex, state, n), obsv = (name, dir, reclen, npages, start)}) =
+    let _ = _cogent_log (dbg_EXT2_DIR_READ, "check_page_loop: at page ")
+    and _ = _cogent_log_u64 (dbg_EXT2_DIR_READ, n)
+    and _ = _cogent_log (dbg_EXT2_DIR_READ, "\n")
+    and offset_end = ext2_last_byte (dir, n) - u16_to_u64 reclen
+
+    -- inner loop at line 396
+    and ((ex, state, next_offset, prev_offset), res) = iterate [(),
+            (Option U32), U32, CheckMatchingDirentAcc,
+           CheckMatchingDirentObsv] (#{
+        gen  = loop_dirent_in_page,
+        cons = loop_dirent_in_page2,
+        acc  = (ex, state, 0, 0),
+        obsv = (name, offset_end, pagebuf)
+    }) !pagebuf
+    in res
+    | Return maybe_de_inode ->
+        -- maybe got the answer
+        maybe_de_inode
+        | Some de_inode ->
+            let _ = _cogent_log (dbg_EXT2_DIR_READ, "check_page_loop: had dirent at offset ")
+            and _ = _cogent_log_u64 (dbg_EXT2_DIR_READ, prev_offset)
+            and _ = _cogent_log (dbg_EXT2_DIR_READ, "\n")
+            in ((ex, state, n), Return (de_inode, page, pagebuf, prev_offset))
+        | None _ ->
+            -- no answer, just need the next page
+            -- update increment
+            let n = n + 1
+
+            -- free the page
+            and page = ospage_unmap (page, pagebuf)
+            and _ = ospagecache_release (page)
+
+            -- check for wrap around
+            in if n >= npages then
+                let n:U64 = 0
+                in if n == start then
+                    -- wrapped around to beginning page, but still didn't
+                    -- find anything. stop and report no entry.
+                    let _ = _cogent_log (dbg_EXT2_DIR_READ, "check_page_loop: wrapped around and reset n, but didn't find entry\n")
+                    in ((ex, state, n), Stop eNoEnt)
+                else
+                    ((ex, state, n), Next ())
+            else
+                if n == start then
+                    -- wrapped around to beginning page, but still didn't
+                    -- find anything. stop and report no entry.
+                    let _ = _cogent_log (dbg_EXT2_DIR_READ, "check_page_loop: wrapped around, but didn't find entry\n")
+                    in ((ex, state, n), Stop eNoEnt)
+                else
+                    ((ex, state, n), Next ())
+    | Stop err ->
+        -- something went bad
+        let page = ospage_unmap (page, pagebuf)
+        and _ = ospagecache_release (page)
+
+        in ((ex, state, n), Stop err)
+
+
+
 ext2_find_entry2: (ExState, FsState, VfsInode, CString!, U16, U64, U64) -> RR (ExState, FsState, VfsInode) (Ext2DirEnt, OSPage, OSPageBuffer, U32) (U32)
-ext2_find_entry2 (ex, state, dir, name, reclen, npages, start) = 
+ext2_find_entry2 (ex, state, dir, name, reclen, npages, start) =
     let n = start
     and _ = _cogent_log (dbg_EXT2_DIR_READ, "ext2_find_entry2: starting at page ")
-    and _ = _cogent_log_u64 (dbg_EXT2_DIR_READ, n) 
-    and _ = _cogent_log (dbg_EXT2_DIR_READ, "\n") 
+    and _ = _cogent_log_u64 (dbg_EXT2_DIR_READ, n)
+    and _ = _cogent_log (dbg_EXT2_DIR_READ, "\n")
     -- TODO: can express this as a seq32 loop
     -- outer loop at line 389
     and ((ex, state, n), res) = iterate [(OSPage, OSPageBuffer),
@@ -475,10 +582,42 @@ ext2_find_entry2 (ex, state, dir, name, reclen, npages, start) =
         -- didn't find it, or some other error occured
         ((ex, state, dir), Error err)
 
+ext2_find_entry2_opt: (ExState, FsState, VfsInode, CString!, U16, U64, U64)
+               -> RR (ExState, FsState, VfsInode) (U32, OSPage, OSPageBuffer, U32) U32
+ext2_find_entry2_opt (ex, state, dir, name, reclen, npages, start) =
+    let n = start
+    and _ = _cogent_log (dbg_EXT2_DIR_READ, "ext2_find_entry2: starting at page ")
+    and _ = _cogent_log_u64 (dbg_EXT2_DIR_READ, n)
+    and _ = _cogent_log (dbg_EXT2_DIR_READ, "\n")
+    -- TODO: can express this as a seq32 loop
+    -- outer loop at line 389
+    and ((ex, state, n), res) = iterate [(OSPage, OSPageBuffer),
+            (U32, OSPage, OSPageBuffer, U64), U32,
+            FindEntryAcc, FindEntryObsv]
+    (#{
+        gen = get_next_page_opt,
+        cons = check_page_loop_opt,
+        acc = (ex, state, n),
+        obsv = (name, dir, reclen, npages, start)
+    }) !dir
+    in res
+    | Return (de_inode, page, kaddr, offset) ->
+        -- found it, update dir_start_lookup for next time
+        let dir_t { fs } = dir
+        and fs_t { dir_start_lookup } = fs
+        and fs = fs_t { dir_start_lookup = n }
+        and dir = dir_t { fs }
+        in ((ex, state, dir), Success (de_inode, page, kaddr, u64_to_u32 offset)) -- XXX: downcast
+    | Stop err ->
+        -- didn't find it, or some other error occured
+        ((ex, state, dir), Error err)
+
+
 -- so, yet again, no documentation
 -- basically, we use dir_start_lookup to cache where we last were in
 -- find_entry. this is to increase performance when we're attempting to
 -- lookup sequential items. we round this to the nearest page
+
 ext2_find_entry: (ExState, FsState, VfsInode, CString!) -> RR (ExState, FsState, VfsInode) (Ext2DirEnt, OSPage, OSPageBuffer, U32) (U32)
 ext2_find_entry (ex, state, dir, name) =
     let reclen = ext2_dir_rec_len (u32_to_u16 (wordarray_length[U8] (name))) !name -- XXX: downcast, but necessary
@@ -493,6 +632,23 @@ ext2_find_entry (ex, state, dir, name) =
             in ext2_find_entry2 (ex, state, dir, name, reclen, npages, start)
         else
             ext2_find_entry2 (ex, state, dir, name, reclen, npages, start)
+
+
+ext2_find_entry_opt: (ExState, FsState, VfsInode, CString!)
+              -> RR (ExState, FsState, VfsInode) (U32, OSPage, OSPageBuffer, U32) (U32)
+ext2_find_entry_opt (ex, state, dir, name) =
+    let reclen = ext2_dir_rec_len (u32_to_u16 (wordarray_length[U8] (name))) !name -- XXX: downcast, but necessary
+    and npages = ext2_dir_pages (dir) !dir
+    in if npages == 0 then
+        let _ = _cogent_log (dbg_EXT2_DIR_READ, "ext2_find_entry: dir had no pages, aborting\n")
+        in ((ex, state, dir), Error eNoEnt)
+    else
+        let start = dir.fs.dir_start_lookup !dir
+        in if start >= npages then
+            let start = u8_to_u64 0
+            in ext2_find_entry2_opt (ex, state, dir, name, reclen, npages, start)
+        else
+            ext2_find_entry2_opt (ex, state, dir, name, reclen, npages, start)
 
 ext2_find_entry_bang: (ExState, FsState, VfsInode!, CString!) -> RR (ExState, FsState) (Ext2DirEnt, OSPage, OSPageBuffer, U32) (U32)
 ext2_find_entry_bang (ex, state, dir, name) =
@@ -518,6 +674,7 @@ ext2_find_entry_bang (ex, state, dir, name) =
             -- didn't find it, or some other error occured
             ((ex, state), Error err)
 
+
 ext2_inode_by_name: (ExState, FsState, VfsInode, CString!) -> RR (ExState, FsState, VfsInode) (VfsIno) (U32)
 ext2_inode_by_name (ex, state, inode, name) =
     let ((ex, state, inode), m) = ext2_find_entry (ex, state, inode, name)
@@ -539,12 +696,31 @@ ext2_inode_by_name (ex, state, inode, name) =
         --in ((ex, state, inode), Error err)
         in ((ex, state, inode), Error eNoEnt)
 
+ext2_inode_by_name_opt: (ExState, FsState, VfsInode, CString!) -> RR (ExState, FsState, VfsInode) VfsIno U32
+ext2_inode_by_name_opt (ex, state, inode, name) =
+    let ((ex, state, inode), m) = ext2_find_entry_opt (ex, state, inode, name)
+    in m
+    | Success (de_ino, page, kaddr, _) ->
+        let page = ospage_unmap (page, kaddr)
+        and _ = ospagecache_release (page)
+
+        in if de_ino /= 0 then
+            let _ = _cogent_log (dbg_EXT2_DIR_READ, "ext2_inode_by_name: found dirent, page, and valid inode\n")
+            in ((ex, state, inode), Success de_ino)
+        else
+            let _ = _cogent_log (dbg_EXT2_DIR_READ, "ext2_inode_by_name: found dirent, page, but ino was 0\n")
+            in ((ex, state, inode), Error eNoEnt)
+    | Error err ->
+        let _ = _cogent_log (dbg_EXT2_DIR_READ, "ext2_inode_by_name: failed to find entry\n")
+        --in ((ex, state, inode), Error err)
+        in ((ex, state, inode), Error eNoEnt)
+
 fsop_dir_lookup: (#{ex: ExState, state: FsState, parent_inode: VfsInode, name: CString!, flags: VfsFlags}) -> RR #{ex: ExState, state: FsState, parent_inode: VfsInode} VfsInode U32
 fsop_dir_lookup (#{ ex = ex, .. }) = 
     if wordarray_length [U8] name > const_maxNameLen then
         (#{ex, state, parent_inode}, Error eNameTooLong)
     else
-        let ((ex, state, parent_inode), res) = ext2_inode_by_name (ex, state, parent_inode, name)
+        let ((ex, state, parent_inode), res) = ext2_inode_by_name_opt (ex, state, parent_inode, name)
         in res
         | Success ino ->
             let _ = _cogent_log (dbg_EXT2_DIR_READ, "fsop_dir_lookup: had ino ")

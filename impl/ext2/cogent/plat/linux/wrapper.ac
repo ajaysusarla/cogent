@@ -26,7 +26,6 @@ static inline VfsInode* EXT2_I(struct inode *inode)
     VfsInodeAbstract *abstract = container_of(inode, VfsInodeAbstract, inode_lin);
     return container_of(abstract, VfsInode, vfs);
 }
-
 #include <libgum/anti/common.ac>
 #include <libgum/anti/iterator.ac>
 #include <libgum/anti/wordarray.ac>
@@ -42,6 +41,54 @@ static inline VfsInode* EXT2_I(struct inode *inode)
 
 extern struct kmem_cache *ext2fs_inode_slab;
 extern const struct super_operations ext2fs_super_operations;
+
+static inline u32 get_Ext2DirEnt_inode(u32 arg)
+{
+        u32 ret;
+
+
+        return ret;
+}
+
+static inline u16 get_Ext2DirEnt_record_length(u32 arg)
+{
+        u16 ret;
+
+
+        return ret;
+}
+
+static inline u8 get_Ext2DirEnt_name_length(u32 arg)
+{
+        u8 ret;
+
+
+        return ret;
+}
+
+static inline u8 get_Ext2DirEnt_file_type(u32 arg)
+{
+        u8 ret;
+
+
+        return ret;
+}
+
+static inline u32 get_Ext2DirEnt_name(u32 arg)
+{
+        u32 ret;
+
+
+        return ret;
+}
+
+static inline u32 inspect_Ext2DirEnt2 ($ty:((OSPageBuffer!, U32)) args)
+{
+        u32 ret;
+
+
+        return ret;
+}
 
 
 /* when we release an inode to the real world, we provide all operations must lock

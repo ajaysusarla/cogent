@@ -158,6 +158,8 @@ clean:
 	find . -name *.thy -exec rm -f {} \;
 	find . -name ROOT -exec rm -f {} \;
 	find . -name BUILD_INFO -exec rm -f {} \;
+	find . -name generated.[ch] -exec rm -f {} \;
+	find . -name "wrapper_pp*" -exec rm -f {} \;
 
 help:
 	@echo "** Cogent ext2fs build help **"

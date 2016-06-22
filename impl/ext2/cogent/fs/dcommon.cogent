@@ -18,6 +18,16 @@ type Ext2DirEnt = #{
     name                : WordArray U8
 }
 
+type Ext2DirEntBox = {
+    inode               : U32,
+    record_length       : U16,
+
+    -- FIXME: ext2 v1+ has file_type as lower half of name_length
+    name_length         : U8, -- FIXME: should go?
+    file_type           : U8,
+    name                : WordArray U8
+}
+
 -- we always pad dir ents RECORDS to groups of 4
 -- the string size remains the same
 const_EXT2_DIR_PAD: U16
@@ -56,6 +66,8 @@ ext2_match: (CString!, Ext2DirEnt!) -> Bool
 ext2_match (c_name, dirent) =
     dirent.inode /= 0 && wordarray_cmp (c_name, dirent.name)
 
+ext2_match_opt: (CString!, U32, U32) -> Bool
+ext2_match_opt (c_name, inode, p_name) = inode /= 0 && wordarray_cmp_opt (c_name, p_name)
 
 destroy_Ext2DirEnt: (ExState, Ext2DirEnt) -> ExState
 destroy_Ext2DirEnt (ex, dirent) = 
@@ -146,3 +158,26 @@ deserialise_Ext2DirEnt2 (ex, buf, idx) =
             | Error () -> (ex, Error ())
         | Error () -> (ex, Error ())
     | Error () -> (ex, Error ())
+
+
+{-# cinline inspect_Ext2DirEnt2 #-}
+-- inspect_Ext2DirEnt2: (ExState, OSPageBuffer!, U32) -> (ExState, Ext2DirEntBox!)
+
+-- This is a massive hack! We should return a pointer (readonly) to dirent, but it
+-- requires region types. So instead we return an address, which is just an integer / zilinc
+inspect_Ext2DirEnt2: (OSPageBuffer!, U32) -> U32
+
+{-# cinline get_Ext2DirEnt_inode#-}
+get_Ext2DirEnt_inode         : U32 -> U32
+
+{-# cinline get_Ext2DirEnt_record_length#-}
+get_Ext2DirEnt_record_length : U32 -> U16
+
+{-# cinline get_Ext2DirEnt_name_length#-}
+get_Ext2DirEnt_name_length   : U32 -> U8
+
+{-# cinline get_Ext2DirEnt_file_type#-}
+get_Ext2DirEnt_file_type     : U32 -> U8
+
+{-# cinline get_Ext2DirEnt_name#-}
+get_Ext2DirEnt_name          : U32 -> U32  -- This returns an address!

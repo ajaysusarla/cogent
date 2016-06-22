@@ -80,6 +80,34 @@ $ty:(Bool) $id:wordarray_cmp ($ty:(((WordArray U8)!, (WordArray U8)!)) args)
         return ret;
 }
 
+$ty:(Bool) $id:wordarray_cmp_opt($ty:(((WordArray U8)!, U32)) args)
+{
+       $ty:((WordArray U8)!) a = args.p1;
+       $ty:((WordArray U8)) b= ($ty:((WordArray U8))) args.p2;
+       $ty:(Bool) ret;
+
+       int i;
+
+       if (a->len != b->len) {
+               return ret;
+       }
+
+       ret.boolean = !memcmp(a->values, b->values, a->len * sizeof *a->values);
+
+       /*
+       for (i = 0; i < a->len; i++) {
+               if (a->values[i] != b->values[i]) {
+                       return ret;
+               }
+       }
+
+       ret.boolean = 1;
+       */
+       return ret;
+}
+
+
+
 $ty:((WordArray a, acc)) $id:wordarray_map_no_break($ty:(WordArrayMapNoBreakP a acc obsv) args)
 {
         $ty:((WordArray a, acc)) ret;
