@@ -42,52 +42,36 @@ static inline VfsInode* EXT2_I(struct inode *inode)
 extern struct kmem_cache *ext2fs_inode_slab;
 extern const struct super_operations ext2fs_super_operations;
 
-static inline u32 get_Ext2DirEnt_inode(u32 arg)
+static inline u32 get_Ext2DirEnt_inode(u32 dirent_ptr)
 {
-        u32 ret;
-
-
-        return ret;
+        return dirent_ptr;
 }
 
-static inline u16 get_Ext2DirEnt_record_length(u32 arg)
+static inline u16 get_Ext2DirEnt_record_length(u32 dirent_ptr)
 {
-        u16 ret;
-
-
-        return ret;
+        return (*(u16*)(dirent_ptr + sizeof(u32)));
 }
 
-static inline u8 get_Ext2DirEnt_name_length(u32 arg)
+static inline u8 get_Ext2DirEnt_name_length(u32 dirent_ptr)
 {
-        u8 ret;
-
-
-        return ret;
+        return (*(u8*)(dirent_ptr + sizeof(u32) + sizeof(u16)));
 }
 
-static inline u8 get_Ext2DirEnt_file_type(u32 arg)
+static inline u8 get_Ext2DirEnt_file_type(u32 dirent_ptr)
 {
-        u8 ret;
-
-
-        return ret;
+        return (dirent_ptr + sizeof(u32) + sizeof(u16) + sizeof(u8));
 }
 
-static inline u32 get_Ext2DirEnt_name(u32 arg)
+static inline u32 get_Ext2DirEnt_name(u32 dirent_ptr)
 {
-        u32 ret;
-
-
-        return ret;
+        return (dirent_ptr + sizeof(u32) + sizeof(u16) + 2 * sizeof(u8));
 }
 
 static inline u32 inspect_Ext2DirEnt2 ($ty:((OSPageBuffer!, U32)) args)
 {
-        u32 ret;
+        u32 arg1 = *(u32*) args.p1;
 
-
-        return ret;
+        return (u32)(arg1 + args.p2);
 }
 
 
