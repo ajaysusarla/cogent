@@ -8,6 +8,6 @@
 -- @TAG(NICTA_GPL)
 --
 
--- Included something, because the cogent compiler doesn't support an empty
--- cogent source file.
-include <gum/common/common.cogent>
+-- Log Level
+_COGENT_LOG_LEVEL: U32
+_COGENT_LOG_LEVEL = 0x0
