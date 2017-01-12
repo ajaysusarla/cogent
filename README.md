@@ -103,11 +103,11 @@ See [impl/ext2/README](./impl/ext2/README) and [impl/bilby/README](./impl/bilby/
   * `tests`: Cogent test programs for proof procedures
 * `isa-parser`: Haskell library for parsing and pretty-printing Isabelle/HOL
 * `impl`: Cogent programs and libraries
-  * `libgum`: Common Cogent and C libraries
   * `bilby`: Bilby file system
     * `cogent`: Cogent code for BilbyFs
     * `c`: C implementation for BilbyFs
     * `proof`: Functional correctness specs and proofs for BilbyFs
   * `ext2`: ext2 file system
     * `cogent`: Cogent code for ext2
+  * `skelfs`: A skelton file system - Template for builing filesystems.
 * `regression`: Regression test script
