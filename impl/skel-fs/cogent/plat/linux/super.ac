@@ -1,0 +1,196 @@
+/*
+ * Copyright 2016, NICTA
+ *
+ * This software may be distributed and modified according to the terms of
+ * the GNU General Public License version 2. Note that NO WARRANTY is provided.
+ * See "LICENSE_GPLv2.txt" for details.
+ *
+ * @TAG(NICTA_GPL)
+ */
+
+$esc:(#include <linux_hdrs.h>)
+
+static struct inode *skelfs_alloc_inode(struct super_block *sb)
+{
+        struct inode *inode;
+
+        /* TODO: Not implemented */
+
+        return inode;
+}
+
+
+static void skelfs_destroy_inode(struct inode *inode)
+{
+        /* TODO: Not implemented */
+}
+
+
+static void skelfs_dirty_inode(struct inode *inode, int flags)
+{
+        /* TODO: Not implemented */
+}
+
+
+static int skelfs_write_inode(struct inode *inode, struct writeback_control *wbc)
+{
+        int err = 0;
+
+        /* TODO: Not implemented */
+
+        return err;
+}
+
+static int skelfs_drop_inode(struct inode *inode)
+{
+        int drop = generic_drop_inode(inode);
+
+        /* TODO: Not implemented */
+
+        return drop;
+}
+
+static void skelfs_evict_inode(struct inode *inode)
+{
+        /* TODO: Not implemented */
+}
+
+
+static void skelfs_put_super(struct super_block *sb)
+{
+        /* TODO: Not implemented */
+}
+
+static int skelfs_sync_fs(struct super_block *sb, int wait)
+{
+        int ret = 0;
+        /* TODO: Not implemented */
+
+        return ret;
+}
+
+static int skelfs_freeze_super(struct super_block *sb)
+{
+        int error = 0;
+
+        /* TODO: Not implemented */
+
+        return error;
+}
+
+static int skelfs_freeze_fs(struct super_block *sb)
+{
+        int error = 0;
+
+        /* TODO: Not implemented */
+
+        return error;
+}
+
+static int skelfs_thaw_super(struct super_block *sb)
+{
+        int ret = 0;
+
+        /* TODO: Not implemented */
+
+        return ret;
+}
+
+static int skelfs_unfreeze_fs(struct super_block *sb)
+{
+        int ret = 0;
+
+        /* TODO: Not implemented */
+
+        return ret;
+}
+
+static int skelfs_statfs(struct dentry *dentry, struct kstatfs *buf)
+{
+        /* TODO: Not implemented */
+
+        return 0;
+}
+
+static int skelfs_remount_fs(struct super_block *sb, int *flags, char *raw_data)
+{
+        int err = 0;
+
+        /* TODO: Not implemented */
+
+        return err;
+}
+
+static void skelfs_umount_begin(struct super_block *sb)
+{
+        /* TODO: Not implemented */
+}
+
+static int skelfs_show_options(struct seq_file *seq, struct dentry *root)
+{
+        /* TODO: Not implemented */
+        return 0;
+}
+
+static int skelfs_show_devname(struct seq_file *m, struct dentry *root)
+{
+        /* TODO: Not implemented */
+        return 0;
+}
+
+static int skelfs_show_path(struct seq_file *m, struct dentry *dentry)
+{
+        /* TODO: Not implemented */
+        return 0;
+}
+
+
+static ssize_t skelfs_quota_read(struct super_block *sb, int type, char *data,
+                                 size_t len, loff_t off)
+{
+        /* TODO: Not implemented */
+        return len;
+}
+
+static ssize_t skelfs_quota_write(struct super_block *sb, int type,
+                                  const char *data, size_t len, loff_t off)
+{
+        /* TODO: Not implemented */
+        return len;
+}
+
+static struct dquot **skelfs_get_dquots(struct inode *inode)
+{
+        struct dquot **dquot;
+        /* TODO: Not implemented */
+        return dquot;
+}
+
+#if 0
+/* This function is available only in the latest kernels */
+static int skelfs_bdev_try_to_free_page(struct super_block *sb,
+                                        struct page *page, gfp_t wait)
+{
+        /* TODO: Not implemented */
+        return try_to_free_buffers(page);
+}
+#endif
+
+static long skelfs_nr_cached_objects(struct super_block *sb,
+                                     struct shrink_control *sc)
+{
+        long ret = 0;
+        /* TODO: Not implemented */
+
+        return ret;
+}
+
+static long skelfs_free_cached_objects(struct super_block *sb,
+                                       struct shrink_control *sc)
+{
+        long ret = 0;
+        /* TODO: Not implemented */
+
+        return ret;
+}
+

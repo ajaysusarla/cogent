@@ -36,7 +36,9 @@ LINUX_ACFILES=$(addprefix $(STDGUM)/gum/anti/, \
 	os.ac \
 	iterator.ac \
 	dls.ac) \
-	plat/linux/wrapper.ac
+	plat/linux/wrapper.ac \
+	plat/linux/super.ac \
+	plat/linux/file.ac
 
 # ADT C files required by verification
 VERIF_ACFILES=plat/verification/wrapper.ac

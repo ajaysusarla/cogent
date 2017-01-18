@@ -21,6 +21,8 @@
 #include <linux/statfs.h>
 #include <linux/fs.h>
 #include <linux/version.h>
+#include <linux/types.h>
+
 #endif  /* __KERNEL__ */
 
 #endif /* _ADT_LINUX_H */
