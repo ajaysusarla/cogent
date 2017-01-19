@@ -9,3 +9,72 @@
  */
 
 $esc:(#include <linux_hdrs.h>)
+
+static loff_t skelfs_file_llseek(struct file *file, loff_t offset, int whence)
+{
+        loff_t maxbytes = 0;
+
+        /* TODO: Not implemented */
+
+        switch(whence) {
+        case SEEK_SET:
+        case SEEK_CUR:
+        case SEEK_END:
+        case SEEK_DATA:
+        case SEEK_HOLE:
+                /* TODO: Not implemented */
+                break;
+        }
+
+        return -EINVAL;
+}
+
+static ssize_t skelfs_seq_file_read(struct file *file, char *buf, size_t size, loff_t *ppos)
+{
+        /* TODO: Not implemented - implement FS specific stuff */
+        return seq_read(file, buf, size, ppos);
+}
+
+
+static ssize_t skelfs_seq_file_write(struct file *file, const char *buf, size_t size, loff_t *ppos)
+{
+        ssize_t ret = 0;
+        /* TODO: Not implemented - implement FS specific stuff */
+
+        return ret;
+}
+
+
+static ssize_t skelfs_file_read_iter(struct kiocb *iocb, struct iov_iter *to)
+{
+        /* TODO: Not implemented - implement FS specific stuff */
+        return generic_file_read_iter(iocb, to);
+}
+
+static ssize_t skelfs_file_write_iter(struct kiocb *iocb, struct iov_iter *from)
+{
+        ssize_t ret = 0;
+
+        /* TODO: Not implemented */
+
+        return ret;
+}
+
+static unsigned int skelfs_file_poll(struct file *filp, poll_table *wait)
+{
+        /* TODO: Not implemented */
+        return DEFAULT_POLLMASK;
+}
+
+long skelfs_file_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
+{
+        /* TODO: Not implemented */
+        return -ENOTTY;
+}
+
+long skelfs_file_compat_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
+{
+        /* TODO: Not implemented */
+        return -ENOTTY;
+}
+

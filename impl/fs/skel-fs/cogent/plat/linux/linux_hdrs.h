@@ -22,7 +22,8 @@
 #include <linux/fs.h>
 #include <linux/version.h>
 #include <linux/types.h>
-
+#include <linux/seq_file.h>
+#include <linux/poll.h>
 #endif  /* __KERNEL__ */
 
 #endif /* _ADT_LINUX_H */
