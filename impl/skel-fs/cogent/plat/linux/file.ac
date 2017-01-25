@@ -78,3 +78,99 @@ long skelfs_file_compat_ioctl(struct file *file, unsigned int cmd, unsigned long
         return -ENOTTY;
 }
 
+static int skelfs_file_mmap(struct file *file, struct vm_area_struct *vma)
+{
+        /* TODO: Not implemented */
+        return generic_file_mmap(file, vma);
+}
+
+static int skelfs_file_open(struct inode * inode, struct file * filp)
+{
+        int ret = 0;
+        /* TODO: Not implemented */
+        return ret;
+}
+
+static int skelfs_file_flush(struct file *file, fl_owner_t id)
+{
+        int ret = 0;
+        /* TODO: Not implemented */
+        return ret;
+}
+
+static int skelfs_file_release(struct inode *inode, struct file *filp)
+{
+        int ret = 0;
+        /* TODO: Not implemented */
+        return ret;
+}
+
+static int skelfs_file_fsync(struct file *file, loff_t start, loff_t end, int datasync)
+{
+        int ret;
+
+        /* TODO: Not implemented */
+
+        ret = generic_file_fsync(file, start, end, datasync);
+
+        return ret;
+}
+
+static int skelfs_fasync(int fd, struct file *file, int flag)
+{
+        int ret = 0;
+        /* TODO: Not implemented */
+
+        return ret;
+}
+
+static int skelfs_flock(struct file *file, int cmd, struct file_lock *fl)
+{
+        int ret = 0;
+        /* TODO: Not implemented */
+
+        return ret;
+}
+
+static unsigned long skelfs_get_unmapped_area(struct file *filp, unsigned long addr,
+                                              unsigned long len, unsigned long pgoff,
+                                              unsigned long flags)
+{
+        unsigned long ret = 0;
+        /* TODO: Not implemented */
+        return ret;
+}
+
+static int skelfs_file_check_flags(int flags)
+{
+        int ret = 0;
+        /* TODO: Not implemented */
+        return ret;
+}
+
+static ssize_t skelfs_file_splice_write(struct pipe_inode_info *pipe, struct file *out,
+                                       loff_t *ppos, size_t len, unsigned int flags)
+{
+        ssize_t ret = 0;
+
+        /* TODO: Not implemented */
+
+        return ret;
+}
+
+static ssize_t skelfs_file_splice_read(struct file *in, loff_t *ppos,
+                                       struct pipe_inode_info *pipe,
+                                       size_t len, unsigned int flags)
+{
+        /* TODO: Not implemented */
+        return generic_file_splice_read(in, ppos, pipe, len, flags);
+}
+
+long skelfs_file_fallocate(struct file *file, int mode, loff_t offset, loff_t len)
+{
+        int ret = 0;
+
+        /* TODO: Not implemented */
+
+        return ret;
+}

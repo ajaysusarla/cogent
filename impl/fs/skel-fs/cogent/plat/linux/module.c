@@ -41,7 +41,7 @@ static const struct super_operations skelfs_sops = {
         .quota_write = skelfs_quota_write,
         .get_dquots = skelfs_get_dquots,
 #endif  /* CONFIG_QUOTA */
-#if 0   /* Available only in the latest kernels */
+#if 0   /* bdev_try_to_free_page() is available only in the latest kernels */
         .bdev_try_to_free_page = skelfs_bdev_try_to_free_page,
 #endif
         .nr_cached_objects = skelfs_nr_cached_objects,
@@ -60,23 +60,19 @@ static const struct file_operations skelfs_file_operations = {
         .poll = skelfs_file_poll,
         .unlocked_ioctl = skelfs_file_ioctl,
         .compat_ioctl = skelfs_file_compat_ioctl,
-#if 0
         .mmap = skelfs_file_mmap,
         .open = skelfs_file_open,
         .flush = skelfs_file_flush,
         .release = skelfs_file_release,
-        .fsync = skelfs_file_sync,
-        .fasync = skelfs_file_async,
-        .lock = skelfs_lock,
-        .sendpage = skelfs_sendpage,
-        .get_unmapped_area = skelfs_file_get_unmapped_area,
+        .fsync = skelfs_file_fsync,
+        .fasync = skelfs_fasync,
+        .lock = skelfs_flock,
+        .get_unmapped_area = skelfs_get_unmapped_area,
         .check_flags = skelfs_file_check_flags,
         .flock = skelfs_flock,
         .splice_read = skelfs_file_splice_read,
         .splice_write = skelfs_file_splice_write,
-        .setlease = skelfs_setlease,
-        .fallocate = skelfs_file_allocate,
-#endif
+        .fallocate = skelfs_file_fallocate,
 };
 
 #if 0
