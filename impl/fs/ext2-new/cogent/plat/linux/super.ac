@@ -1,0 +1,563 @@
+/*
+ * Copyright 2017, NICTA
+ *
+ * This software may be distributed and modified according to the terms of
+ * the GNU General Public License version 2. Note that NO WARRANTY is provided.
+ * See "LICENSE_GPLv2.txt" for details.
+ *
+ * @TAG(NICTA_GPL)
+ */
+
+struct _VfsInodeAbstract;             /* Defined in abstract.h */
+
+/*
+  the EXT2_I() function gets the VfsInode from the give struct inode. This
+  is done using the container_of() function provided by the kernel.
+
+  Our VfsInode is a two level container, like such:
+
+  +-----------------------+
+  | VfsInode              |
+  |                       |
+  | +-------------------+ |
+  | | VfsInodeAbstract  | |
+  | |                   | |
+  | | +---------------+ | |
+  | | | struct inode  | | |
+  | | |               | | |
+  | | +---------------+ | |
+  | +-------------------+ |
+  +-----------------------+
+
+  VfsInode is defined in vfs.cogent
+ */
+static inline $ty:(VfsInode) EXT2_I(struct inode *inode)
+{
+        struct _VfsInodeAbstract *ai = container_of(inode,
+                                                    $esc:(struct _VfsInodeAbstract),
+                                                    vfs_inode);
+        return container_of(ai, VfsInode, vfs);
+}
+
+/*
+  EXT2_SB(): Return Ext2SbInfo given a struct super_block
+ */
+static inline $ty:(Ext2SbInfo) EXT2_SB(struct super_block *sb)
+{
+        return sb->s_fs_info;
+}
+
+/*
+ * get_sb_block():
+ * This function is from linux/fs/ext2/super.c
+ */
+static unsigned long get_sb_block(void **data)
+{
+        unsigned long   sb_block;
+        char            *options = (char *) *data;
+
+        if (!options || strncmp(options, "sb=", 3) != 0)
+                return 1;       /* Default location */
+        options += 3;
+        sb_block = simple_strtoul(options, &options, 0);
+        if (*options && *options != ',') {
+                printk("EXT2-fs: Invalid sb specification: %s\n",
+                       (char *) *data);
+                return 1;
+        }
+        if (*options == ',')
+                options++;
+        *data = (void *) options;
+        return sb_block;
+}
+
+enum {
+	Opt_bsd_df, Opt_minix_df, Opt_grpid, Opt_nogrpid,
+	Opt_resgid, Opt_resuid, Opt_sb, Opt_err_cont, Opt_err_panic,
+	Opt_err_ro, Opt_nouid32, Opt_nocheck, Opt_debug,
+	Opt_oldalloc, Opt_orlov, Opt_nobh, Opt_user_xattr, Opt_nouser_xattr,
+	Opt_acl, Opt_noacl, Opt_xip, Opt_dax, Opt_ignore, Opt_err, Opt_quota,
+	Opt_usrquota, Opt_grpquota, Opt_reservation, Opt_noreservation
+};
+
+$esc:(static const match_table_t tokens = {
+	{Opt_bsd_df, "bsddf"},
+	{Opt_minix_df, "minixdf"},
+	{Opt_grpid, "grpid"},
+	{Opt_grpid, "bsdgroups"},
+	{Opt_nogrpid, "nogrpid"},
+	{Opt_nogrpid, "sysvgroups"},
+	{Opt_resgid, "resgid=%u"},
+	{Opt_resuid, "resuid=%u"},
+	{Opt_sb, "sb=%u"},
+	{Opt_err_cont, "errors=continue"},
+	{Opt_err_panic, "errors=panic"},
+	{Opt_err_ro, "errors=remount-ro"},
+	{Opt_nouid32, "nouid32"},
+	{Opt_nocheck, "check=none"},
+	{Opt_nocheck, "nocheck"},
+	{Opt_debug, "debug"},
+	{Opt_oldalloc, "oldalloc"},
+	{Opt_orlov, "orlov"},
+	{Opt_nobh, "nobh"},
+	{Opt_user_xattr, "user_xattr"},
+	{Opt_nouser_xattr, "nouser_xattr"},
+	{Opt_acl, "acl"},
+	{Opt_noacl, "noacl"},
+	{Opt_xip, "xip"},
+	{Opt_dax, "dax"},
+	{Opt_grpquota, "grpquota"},
+	{Opt_ignore, "noquota"},
+	{Opt_quota, "quota"},
+	{Opt_usrquota, "usrquota"},
+	{Opt_reservation, "reservation"},
+	{Opt_noreservation, "noreservation"},
+	{Opt_err, NULL}
+        };)
+
+/*
+  parse_options_ac:
+  This function is based on the parse_options() function in linux/fs/ext2/super.c
+ */
+$ty:((SysState, U64, #KUID, #KGID)) parse_options_ac ($ty:((SysState, CVoid!, U64, #KUID, #KGID)) fnargs)
+{
+        $ty:((SysState, U64, #KUID, #KGID)) ret;
+        char *options = (char *) fnargs.p2;
+        char *p;
+	substring_t args[MAX_OPT_ARGS];
+	int option;
+        $ty:(#KUID) uid;
+        $ty:(#KGID) gid;
+
+        ret.p1 = fnargs.p1;       /* SysState */
+        ret.p2 = fnargs.p3;       /* s_mount_opt */
+        ret.p3 = fnargs.p4;       /* s_resuid */
+        ret.p4 = fnargs.p5;       /* s_resgid */
+
+        if (!options)
+                return ret;
+
+        while ((p = strsep(&options, ",")) != NULL) {
+                int token;
+                if (!*p)
+                        continue;
+
+                token = match_token(p, tokens, args);
+                switch (token) {
+                case Opt_bsd_df:
+                        ret.p2 &= ~$exp:(flag_EXT2FS_MOUNT_MINIX_DF);
+                        break;
+                case Opt_minix_df:
+                        ret.p2 |= $exp:(flag_EXT2FS_MOUNT_MINIX_DF);
+                        break;
+                case Opt_grpid:
+                        ret.p2 |= $exp:(flag_EXT2FS_MOUNT_GRPID);
+                        break;
+                case Opt_nogrpid:
+                        ret.p2 &= ~$exp:(flag_EXT2FS_MOUNT_GRPID);
+                        break;
+                case Opt_resuid:
+			if (match_int(&args[0], &option))
+				return ret;
+			uid = make_kuid(current_user_ns(), option);
+			if (!uid_valid(uid)) {
+                                /* TODO: Print KERN_ERR */
+				return ret;
+			}
+			ret.p3 = uid;
+                        break;
+                case Opt_resgid:
+			if (match_int(&args[0], &option))
+				return ret;
+			gid = make_kgid(current_user_ns(), option);
+			if (!gid_valid(gid)) {
+                                /* TODO: Print KERN_ERR */
+				return ret;
+			}
+                        ret.p4 = gid;
+                        break;
+                case Opt_sb:
+			/* handled by get_sb_block() instead of here */
+                        break;
+                case Opt_err_panic:
+                        ret.p2 &= ~$exp:(flag_EXT2FS_MOUNT_ERRORS_CONT);
+                        ret.p2 &= ~$exp:(flag_EXT2FS_MOUNT_ERRORS_RO);
+                        ret.p2 |= $exp:(flag_EXT2FS_MOUNT_ERRORS_PANIC);
+                        break;
+                case Opt_err_ro:
+                        ret.p2 &= ~$exp:(flag_EXT2FS_MOUNT_ERRORS_CONT);
+                        ret.p2 &= ~$exp:(flag_EXT2FS_MOUNT_ERRORS_PANIC);
+                        ret.p2 |= $exp:(flag_EXT2FS_MOUNT_ERRORS_RO);
+                        break;
+                case Opt_err_cont:
+                        ret.p2 &= ~$exp:(flag_EXT2FS_MOUNT_ERRORS_PANIC);
+                        ret.p2 &= ~$exp:(flag_EXT2FS_MOUNT_ERRORS_RO);
+                        ret.p2 |= $exp:(flag_EXT2FS_MOUNT_ERRORS_CONT);
+                        break;
+                case Opt_nouid32:
+                        ret.p2 |= $exp:(flag_EXT2FS_MOUNT_NO_UID32);
+                        break;
+		case Opt_nocheck:
+                        ret.p2 &= ~$exp:(flag_EXT2FS_MOUNT_CHECK);
+                        break;
+		case Opt_debug:
+                        ret.p2 |= $exp:(flag_EXT2FS_MOUNT_DEBUG);
+                        break;
+		case Opt_oldalloc:
+                        ret.p2 |= $exp:(flag_EXT2FS_MOUNT_OLDALLOC);
+                        break;
+		case Opt_orlov:
+                        ret.p2 &= ~$exp:(flag_EXT2FS_MOUNT_OLDALLOC);
+                        break;
+		case Opt_nobh:
+                        ret.p2 |= $exp:(flag_EXT2FS_MOUNT_NOBH);
+#ifdef CONFIG_EXT2_FS_XATTR
+		case Opt_user_xattr:
+                        ret.p2 |= $exp:(flag_EXT2FS_MOUNT_XATTR_USER);
+		case Opt_nouser_xattr:
+                        ret.p2 &= ~$exp:(flag_EXT2FS_MOUNT_XATTR_USER);
+#else
+		case Opt_user_xattr:
+		case Opt_nouser_xattr:
+                        /* TODO: print KERN_INFO msg */
+                        break;
+#endif
+#ifdef CONFIG_EXT2_FS_POSIX_ACL
+		case Opt_acl:
+                        ret.p2 |= $exp:(flag_EXT2FS_MOUNT_POSIX_ACL);
+		case Opt_noacl:
+                        ret.p2 &= ~$exp:(flag_EXT2FS_MOUNT_POSIX_ACL);
+#else
+		case Opt_acl:
+		case Opt_noacl:
+                        /* TODO: print KERN_INFO msg */
+                        break;
+#endif
+		case Opt_xip:
+                        ret.p2 |= $exp:(flag_EXT2FS_MOUNT_XIP);
+                        break;
+                case Opt_dax:
+#ifdef CONFIG_FS_DAX
+                        ret.p2 |= $exp:(flag_EXT2FS_MOUNT_DAX);
+#else
+                        /* TODO: print KERN_INFO msg here */
+#endif
+                        break;
+#if defined(CONFIG_QUOTA)
+		case Opt_quota:
+		case Opt_usrquota:
+                        ret.p2 |= $exp:(flag_EXT2FS_MOUNT_USRQUOTA);
+			break;
+		case Opt_grpquota:
+                        ret.p2 |= $exp:(flag_EXT2FS_MOUNT_GRPQUOTA);
+			break;
+#else
+		case Opt_quota:
+		case Opt_usrquota:
+		case Opt_grpquota:
+                        /* TODO: print KERN_INFO msg here */
+			break;
+#endif
+		case Opt_reservation:
+                        ret.p2 |= $exp:(flag_EXT2FS_MOUNT_RESERVATION);
+                        break;
+		case Opt_noreservation:
+                        ret.p2 &= ~$exp:(flag_EXT2FS_MOUNT_RESERVATION);
+                        break;
+		case Opt_ignore:
+                        break;
+                default:
+                        return ret;
+                }
+        }
+
+        return ret;
+}
+/*
+ * ext2fs_fill_super - Read in the superblock.
+ * @sb: The VFS superblock
+ * @data: Mount options
+ * @silent: Don't complain if it's not ext2 filesystem
+ */
+static int ext2fs_fill_super(struct super_block *sb, void *data, int silent)
+{
+        struct buffer_head *bh;
+        $ty:(Ext2FSSuperBlock) es;
+        struct inode *root;
+        int err = 0;
+        SysState *st;
+        ExState *ex;
+        $ty:(Ext2SbInfo) sbi;
+        unsigned long sb_block = get_sb_block(&data);
+        unsigned long logic_sb_block;
+        unsigned long offset = 0;
+        int blocksize = BLOCK_SIZE;
+        $ty:((SysState, VfsSuperBlock!, U64)) sbnr_args;
+        $ty:(RR SysState (BufferHead, U64, U64) ()) sbnr_ret;
+        $ty:((SysState, VfsSuperBlock, Ext2FSSuperBlock, CVoid)) fill_super_args;
+        $ty:(RR (SysState, VfsSuperBlock) ((Ext2SbInfo take (..)) put (s_sbnbh)) ErrCode) fill_super_ret;
+
+        err = -ENOMEM;
+
+        /*
+          Calculate the logic_sb_block address and offset and also get a
+          valid pointer to the buffer head that contains the superblock.
+         */
+
+        sbnr_args.p1 = st;
+        sbnr_args.p2 = sb;
+        sbnr_args.p3 = sb_block;
+
+        sbnr_ret = ext2fs_get_bh_of_sb_cg(sbnr_args);
+        if (sbnr_ret.p2.tag == TAG_ENUM_Error) {
+                $esc:(printk(KERN_ERR "unable to compute sb block num and offset\n"));
+                goto failed_sbi;
+        }
+
+        bh = sbnr_ret.p2.Success.p1;
+        logic_sb_block = sbnr_ret.p2.Success.p2;
+        offset = sbnr_ret.p2.Success.p3;
+
+        es = ($ty:(Ext2FSSuperBlock)) (((char *)bh->b_data) + offset);
+
+        sb->s_magic = le16_to_cpu(es->s_magic);
+
+        if (sb->s_magic != EXT2_SUPER_MAGIC) {
+                $esc:(printk(KERN_ERR "Not EXT2 FS\n"));
+                goto failed;
+        }
+
+        /*
+          Call fill_super_cg()
+         */
+        fill_super_args.p1 = st;
+        fill_super_args.p2 = sb;
+        fill_super_args.p3 = es;
+        fill_super_args.p4 = data;
+        fill_super_ret = ext2fs_fill_super_cg(fill_super_args);
+
+failed_sbi:
+failed:
+        brelse(bh);             /* TODO: Use buffer_head_free() */
+        return err;
+}
+
+static struct inode *ext2fs_alloc_inode(struct super_block *sb)
+{
+        $ty:(#VfsInode) *ei;
+
+        ei = kmem_cache_alloc(ext2_inode_cachep, GFP_KERNEL);
+        if (!ei)
+                return NULL;
+
+#ifdef CONFIG_QUOTA
+        memset(&ei->vfs.i_dquot, 0, sizeof(ei->vfs.i_dquot));
+#endif  /* CONFIG_QUOTA */
+        return (&ei->vfs.vfs_inode);
+}
+
+static void ext2fs_i_callback(struct rcu_head *head)
+{
+        struct inode *inode = container_of(head, $esc:(struct inode), i_rcu);
+        kmem_cache_free(ext2_inode_cachep, EXT2_I(inode));
+}
+
+static void ext2fs_destroy_inode(struct inode *inode)
+{
+        call_rcu(&inode->i_rcu, ext2fs_i_callback);
+}
+
+static void ext2fs_put_super(struct super_block * sb)
+{
+        $ty:(Ext2SbInfo) sbi = EXT2_SB(sb);
+        $ty:((SysState, Ext2SbInfo, VfsSuperBlock)) args;
+        $ty:(SysState) st;
+        int db_count;
+        int i;
+
+        args.p1 = st;
+        args.p2 = sbi;
+        args.p3 = sb;
+
+        ext2fs_put_super_cg(args);
+
+        sb->s_fs_info = NULL;
+}
+
+static int ext2fs_sync_fs(struct super_block *sb, int wait)
+{
+        return 0;
+}
+
+static int ext2fs_freeze_fs(struct super_block *sb)
+{
+        return 0;
+}
+
+static int ext2fs_unfreeze_fs(struct super_block *sb)
+{
+        SysState *st;
+        $ty:((SysState, VfsSuperBlock)) args;
+        args.p1 = st;
+        args.p2 = sb;
+
+        ext2fs_write_super_cg(args);
+        return 0;
+}
+
+static int ext2fs_statfs(struct dentry * dentry, struct kstatfs * buf)
+{
+        return 0;
+}
+
+static int ext2fs_remount_fs(struct super_block * sb, int * flags, char * data)
+{
+        return 0;
+}
+
+static int ext2fs_show_options(struct seq_file *seq, struct dentry *root)
+{
+        return 0;
+}
+
+$esc:(#ifdef CONFIG_QUOTA)
+static ssize_t ext2fs_quota_read(struct super_block *sb, int type, char *data,
+                               size_t len, loff_t off)
+{
+        return len;
+}
+
+static ssize_t ext2fs_quota_write(struct super_block *sb, int type,
+                                const char *data, size_t len, loff_t off)
+{
+        return len;
+}
+
+static struct dquot **ext2fs_get_dquots(struct inode *inode)
+{
+        return EXT2_I(inode)->vfs.i_dquot;
+}
+$esc:(#endif)  /* CONFIG_QUOTA */
+
+
+/**
+ * The following functions are called from Cogent.
+ **/
+$ty:(Bool) ext2fs_super_is_writeable(struct super_block *sb)
+{
+        return sb->s_flags & MS_RDONLY ? $exp:(False) : $exp:(True);
+}
+
+$ty:((SysState, VfsSuperBlock)) ext2fs_sync_fs_ac($ty:((SysState, VfsSuperBlock)) args)
+{
+        int ret;
+        $ty:(SysState) st = args.p1;
+        $ty:(VfsSuperBlock) sb = args.p2;
+
+        ret = ext2fs_sync_fs(sb, 1);
+
+        args.p2 = sb;
+
+        return args;
+}
+
+$ty:((SysState, VfsSuperBlock, Ext2SbInfo)) ext2fs_sync_super($ty:((SysState, VfsSuperBlock, Ext2SbInfo)) args)
+{
+        /* TODO: Need to implement this function */
+
+        return args;
+}
+
+/**
+ * ext2fs_put_super() helpers
+ */
+inline $ty:((SysState, Ext2SbInfo)) ext2fs_put_super_sync_fs_state($ty:((SysState, Ext2SbInfo)) args)
+{
+        $ty:(Ext2SbInfo) sbi = args.p2;
+        struct ext2fs_super_block *es = sbi->s_sbnbh.s_es;
+
+        spin_lock(&sbi->s_lock);
+        es->s_state = cpu_to_le16(sbi->s_mount_state);
+        spin_unlock(&sbi->s_lock);
+
+        return args;
+}
+
+inline $ty:((SysState, Ext2SbInfo)) ext2fs_put_super_free_group_desc($ty:((SysState, Ext2SbInfo)) args)
+{
+        $ty:(Ext2SbInfo) sbi = args.p2;
+        int db_count = sbi->s_gdb_count;
+        int i;
+
+        for (i = 0; i < db_count; i++)
+                if (sbi->s_sbnbh.s_group_desc[i])
+                        brelse(sbi->s_sbnbh.s_group_desc[i]);
+
+        kfree(sbi->s_sbnbh.s_group_desc);
+
+        return args;
+}
+
+inline $ty:((SysState, VfsSuperBlock, Ext2SbInfo)) ext2fs_put_super_free_sbh($ty:((SysState, VfsSuperBlock, Ext2SbInfo)) args)
+{
+        $ty:(Ext2SbInfo) sbi = args.p3;
+        $ty:(#Ext2SBnBHAbstractType) sbdata = sbi->s_sbnbh;
+
+        brelse(sbdata.s_sbh);
+        args.p2->s_fs_info = NULL;
+
+        return args;
+}
+
+/**  **/
+
+/**
+   ext2fs_fill_super() helpers
+ */
+
+/* ext2fs_sbnbh_new:
+   Function 'creates' a new Ext2SBnBHAbstractType, does nothing much really, but
+   it ensures that we have a clean api.
+ */
+inline $ty:((SysState, #Ext2SBnBHAbstractType)) ext2fs_sbnbh_new($ty:(SysState) st)
+{
+        $ty:((SysState, #Ext2SBnBHAbstractType)) ret;
+        ret.p1 = st;
+
+        return ret;
+}
+
+/* ext2fs_sbnbh_set_ses:
+   Given Ext2FSSuperBlock, add it to the #Ext2SBnBHAbstractType.
+ */
+inline $ty:((SysState, #Ext2SBnBHAbstractType)) ext2fs_sbnbh_set_ses($ty:((SysState, #Ext2SBnBHAbstractType, Ext2FSSuperBlock!)) args)
+{
+        $ty:((SysState, #Ext2SBnBHAbstractType)) ret;
+        ret.p1 = args.p1;
+
+        ret.p2.s_es = (struct ext2fs_super_block *)args.p3; /* Yuck! */
+
+        return ret;
+}
+
+inline $ty:(U64) ext2fs_sbnbh_ses_get_def_mount_opts($ty:(#Ext2SBnBHAbstractType) sbnbh)
+{
+        return le32_to_cpu(sbnbh.s_es->s_default_mount_opts);
+}
+
+inline $ty:(U16) ext2fs_sbnbh_ses_get_errors($ty:(#Ext2SBnBHAbstractType) sbnbh)
+{
+        return le16_to_cpu(sbnbh.s_es->s_errors);
+}
+
+inline $ty:(#UID) ext2fs_sbnbh_ses_get_def_resuid($ty:(#Ext2SBnBHAbstractType) sbnbh)
+{
+        return le16_to_cpu(sbnbh.s_es->s_def_resuid);
+}
+
+inline $ty:(#GID) ext2fs_sbnbh_ses_get_def_resgid($ty:(#Ext2SBnBHAbstractType) sbnbh)
+{
+        return le16_to_cpu(sbnbh.s_es->s_def_resgid);
+}
+
+/**  **/

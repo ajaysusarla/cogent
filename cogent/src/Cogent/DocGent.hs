@@ -229,6 +229,7 @@ makeHtml content = [shamlet| <pre class="source bg-Dull-Black">#{content}|]
 
 genDoc :: (?knowns :: [(String, SourcePos)]) => (SourcePos, DocString, TopLevel LocType VarName LocExpr) -> Html
 genDoc (p,s,x@(Include {})) = error "Impossible!"
+genDoc (p,s,x@(IncludeStd {})) = error "Impossible!"
 genDoc (p,s,x@(TypeDec n ts t)) =
     let header = let ?knowns = [] in runState (displayHTML (prettyPrint id $ return $ renderTypeDecHeader n ts)) defaultState
         df     = prettyType t Nothing
@@ -426,6 +427,7 @@ docGent input = let
                       generateIndex ?knowns
                       generateContents $ zip titles' (map (fst . head) items'')
   where toKnown (p, _, Include {}) = Nothing
+        toKnown (p, _, IncludeStd {}) = Nothing
         toKnown (p, _, TypeDec tn _ _)  = Just (tn, p)
         toKnown (p, _, AbsTypeDec tn _) = Just (tn, p)
         toKnown (p, _, AbsDec tn _)     = Just (tn, p)

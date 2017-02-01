@@ -1,0 +1,56 @@
+newVfsInode
+freeVfsInode
+newExt2SbInfo
+freeExt2SbInfo
+newBlockGroupLock
+freeBlockGroupLock
+newU8Ptr
+freeU8Ptr
+
+-- Cogent ext2 functions
+ext2fs_write_super_cg
+ext2fs_fill_super_cg
+ext2fs_put_super_cg
+ext2fs_get_bh_of_sb_cg
+ext2fs_fill_super_set_default_opts
+ext2fs_sbnbh_new
+ext2fs_sbnbh_set_ses
+ext2fs_sbnbh_ses_get_def_mount_opts
+ext2fs_sbnbh_ses_get_errors
+ext2fs_sbnbh_ses_get_def_resuid
+ext2fs_sbnbh_ses_get_def_resgid
+ext2fs_max_size
+
+-- utility functions
+parse_options_ac
+ext2fs_ndir_blocks_ac
+ext2fs_ind_block_ac
+ext2fs_dind_block_ac
+ext2fs_tind_block_ac
+ext2fs_n_blocks_ac
+ext2fs_file_size_upper_limit
+two_power_cg
+
+-- linux api
+percpu_counter_destroy_cg
+brelse_ac
+sb_min_blocksize_ac
+max_lfs_filesize_ac
+init_user_ns_ac
+current_user_ns_ac
+make_kuid_ac
+make_kgid_ac
+
+-- libgum functions
+buffer_head_set_size
+buffer_head_serialise_Ple32
+buffer_head_deserialise_Ple32
+buffer_head_serialise_Ple16
+buffer_head_deserialise_Ple16
+buffer_head_serialise_U8
+buffer_head_deserialise_U8
+buffer_head_find
+buffer_head_memset
+buffer_head_find_next_zero_bit
+buffer_head_set_bit
+buffer_head_clear_bit

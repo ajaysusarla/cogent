@@ -1,0 +1,153 @@
+/*
+ * Copyright 2017, NICTA
+ *
+ * This software may be distributed and modified according to the terms of
+ * the GNU General Public License version 2. Note that NO WARRANTY is provided.
+ * See "LICENSE_GPLv2.txt" for details.
+ *
+ * @TAG(NICTA_GPL)
+ */
+
+/*
+  TODO: These functions need to cleaned up, there are too many of them!
+ */
+
+/**
+   Memory allocation and Freeing using kmalloc()/kfree()
+ **/
+#define DEFINE_KMALLOC_FREE_FUNC(TYPE) \
+$ty:(R (SysState, TYPE) SysState) $id:(new##TYPE)($ty:(SysState) ex) \
+{ \
+        $ty:(R (SysState, TYPE) SysState) ret; \
+        ret.Success.p2 = kmalloc(sizeof(*ret.Success.p2), GFP_KERNEL); \
+ \
+        if (ret.Success.p2 == NULL) { \
+                ret.tag = TAG_ENUM_Error; \
+                ret.Error = ex; \
+        } else { \
+                ret.tag = TAG_ENUM_Success; \
+                ret.Success.p1 = ex; \
+        } \
+        return ret; \
+} \
+ \
+$ty:(SysState) $id:(free##TYPE)($ty:((SysState, TYPE)) args) \
+{ \
+        kfree(args.p2); \
+        return args.p1; \
+}
+
+DEFINE_KMALLOC_FREE_FUNC(VfsInode)
+
+
+/**
+   Memory allocation and Freeing using kzalloc()/kfree()
+   kzalloc() uses GFP_KERNEL
+ **/
+
+#define DEFINE_KZALLOC_FREE_FUNC_LINEAR(TYPE) \
+$ty:(RR SysState (TYPE take (..)) ErrCode) $id:(new##TYPE)($ty:(SysState) st) \
+{ \
+        $ty:(RR SysState (TYPE take (..)) ErrCode) ret;                           \
+        ret.p2.Success = kzalloc(sizeof(*(ret.p2.Success)), GFP_KERNEL); \
+ \
+        ret.p1 = st; \
+        if (ret.p2.Success == NULL) { \
+                ret.p2.tag = TAG_ENUM_Error; \
+                ret.p2.Error = 1; \
+        } else { \
+                ret.p2.tag = TAG_ENUM_Success; \
+        } \
+        return ret; \
+} \
+ \
+$ty:(SysState) $id:(free##TYPE)($ty:((SysState, TYPE take (..))) args)  \
+{ \
+        kfree(args.p2); \
+        return args.p1; \
+}
+
+DEFINE_KZALLOC_FREE_FUNC_LINEAR(Ext2SbInfo)
+
+
+
+#define DEFINE_KZALLOC_FREE_FUNC(TYPE) \
+$ty:(R (SysState, TYPE) SysState) $id:(new##TYPE)($ty:(SysState) ex) \
+{ \
+        $ty:(R (SysState, TYPE) SysState) ret; \
+        ret.Success.p2 = kzalloc(sizeof(*ret.Success.p2), GFP_KERNEL); \
+ \
+        if (ret.Success.p2 == NULL) { \
+                ret.tag = TAG_ENUM_Error; \
+                ret.Error = ex; \
+        } else { \
+                ret.tag = TAG_ENUM_Success; \
+                ret.Success.p1 = ex; \
+        } \
+        return ret; \
+} \
+ \
+$ty:(SysState) $id:(free##TYPE)($ty:((SysState, TYPE)) args) \
+{ \
+        kfree(args.p2); \
+        return args.p1; \
+}
+
+DEFINE_KZALLOC_FREE_FUNC(BlockGroupLock)
+
+/**
+   Memory allocation and Freeing using kcalloc()/kfree()
+   kcalloc() uses GFP_KERNEL
+ **/
+
+#define DEFINE_KCALLOC_FREE_FUNC(TYPE) \
+        $ty:(R (SysState, TYPE) SysState) $id:(new##TYPE)($ty:((SysState, U32)) args) \
+{ \
+        $ty:(R (SysState, TYPE) SysState) ret; \
+        ret.Success.p2 = kcalloc(args.p2, sizeof(*ret.Success.p2), GFP_KERNEL); \
+ \
+        if (ret.Success.p2 == NULL) { \
+                ret.tag = TAG_ENUM_Error; \
+                ret.Error = args.p1; \
+        } else { \
+                ret.tag = TAG_ENUM_Success; \
+                ret.Success.p1 = args.p1; \
+        } \
+        return ret; \
+} \
+ \
+$ty:(SysState) $id:(free##TYPE)($ty:((SysState, TYPE)) args) \
+{ \
+        kfree(args.p2); \
+        return args.p1; \
+}
+
+DEFINE_KCALLOC_FREE_FUNC(U8Ptr)
+
+
+/**
+   Memory allocation anf freeing using kmalloc()/kfree() with TYPES and PARAMS
+ */
+#define DEFINE_PTYPE_KMALLOC_FREE_FUNC(TYPE, PARAMS) \
+$ty:(R (SysState, TYPE PARAMS) SysState) $id:(new##TYPE)($ty:(SysState) ex) \
+{ \
+        $ty:(R (SysState, TYPE PARAMS) SysState) ret; \
+        ret.Success.p2 = kmalloc(sizeof(*ret.Success.p2)); \
+ \
+        if (ret.Success.p2 == NULL) { \
+                ret.tag = TAG_ENUM_Error; \
+                ret.Error = ex; \
+        } else { \
+                ret.tag = TAG_ENUM_Success; \
+                ret.Success.p1 = ex; \
+        } \
+        return ret; \
+} \
+ \
+$ty:(SysState) $id:(free##TYPE)($ty:((SysState, TYPE PARAMS)) args) \
+{ \
+        kfree(args.p2); \
+        return args.p1; \
+}
+
+DEFINE_PTYPE_KMALLOC_FREE_FUNC(ListNode, a)

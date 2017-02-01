@@ -1,0 +1,112 @@
+--
+-- Copyright 2017, NICTA
+--
+-- This software may be distributed and modified according to the terms of
+-- the GNU General Public License version 2. Note that NO WARRANTY is provided.
+-- See "LICENSE_GPLv2.txt" for details.
+--
+-- @TAG(NICTA_GPL)
+--
+
+-- ext2fs mount flags
+flag_EXT2FS_MOUNT_CHECK        : U32
+flag_EXT2FS_MOUNT_CHECK = 0x000001
+
+flag_EXT2FS_MOUNT_OLDALLOC     : U32
+flag_EXT2FS_MOUNT_OLDALLOC = 0x000002
+
+flag_EXT2FS_MOUNT_GRPID        : U32
+flag_EXT2FS_MOUNT_GRPID = 0x000004
+
+flag_EXT2FS_MOUNT_DEBUG        : U32
+flag_EXT2FS_MOUNT_DEBUG = 0x000008
+
+flag_EXT2FS_MOUNT_ERRORS_CONT  : U32
+flag_EXT2FS_MOUNT_ERRORS_CONT = 0x000010
+
+flag_EXT2FS_MOUNT_ERRORS_RO    : U32
+flag_EXT2FS_MOUNT_ERRORS_RO = 0x000020
+
+flag_EXT2FS_MOUNT_ERRORS_PANIC : U32
+flag_EXT2FS_MOUNT_ERRORS_PANIC = 0x000040
+
+flag_EXT2FS_MOUNT_MINIX_DF     : U32
+flag_EXT2FS_MOUNT_MINIX_DF = 0x000080
+
+flag_EXT2FS_MOUNT_NOBH         : U32
+flag_EXT2FS_MOUNT_NOBH = 0x000100
+
+flag_EXT2FS_MOUNT_NO_UID32     : U32
+flag_EXT2FS_MOUNT_NO_UID32 = 0x000200
+
+flag_EXT2FS_MOUNT_XATTR_USER   : U32
+flag_EXT2FS_MOUNT_XATTR_USER = 0x004000
+
+flag_EXT2FS_MOUNT_POSIX_ACL    : U32
+flag_EXT2FS_MOUNT_POSIX_ACL = 0x008000
+
+flag_EXT2FS_MOUNT_XIP          : U32
+flag_EXT2FS_MOUNT_XIP = 0x010000
+
+flag_EXT2FS_MOUNT_USRQUOTA     : U32
+flag_EXT2FS_MOUNT_USRQUOTA = 0x020000
+
+flag_EXT2FS_MOUNT_GRPQUOTA     : U32
+flag_EXT2FS_MOUNT_GRPQUOTA = 0x040000
+
+flag_EXT2FS_MOUNT_RESERVATION  : U32
+flag_EXT2FS_MOUNT_RESERVATION = 0x080000
+
+flag_EXT2FS_MOUNT_DAX          : U32
+flag_EXT2FS_MOUNT_DAX = 0x100000
+
+
+-----------------
+-- ext2fs default mount options
+-----------------
+flag_EXT2FS_DEFM_DEBUG         : U16
+flag_EXT2FS_DEFM_DEBUG = 0x0001
+
+flag_EXT2FS_DEFM_BSDGROUPS     : U16
+flag_EXT2FS_DEFM_BSDGROUPS = 0x0002
+
+flag_EXT2FS_DEFM_XATTR_USER    : U16
+flag_EXT2FS_DEFM_XATTR_USER = 0x0004
+
+flag_EXT2FS_DEFM_ACL           : U16
+flag_EXT2FS_DEFM_ACL = 0x0008
+
+flag_EXT2FS_DEFM_UID16         : U16
+flag_EXT2FS_DEFM_UID16 = 0x0010
+
+-- Not used by ext2, but reserved for use by ext3
+flag_EXT3FS_DEFM_JMODE         : U16
+flag_EXT3FS_DEFM_JMODE = 0x0060 
+
+flag_EXT3FS_DEFM_JMODE_DATA    : U16
+flag_EXT3FS_DEFM_JMODE_DATA = 0x0020
+
+flag_EXT3FS_DEFM_JMODE_ORDERED : U16
+flag_EXT3FS_DEFM_JMODE_ORDERED = 0x0040
+
+flag_EXT3FS_DEFM_JMODE_WBACK   : U16
+flag_EXT3FS_DEFM_JMODE_WBACK = 0x0060
+
+
+-----------------
+-- ext2fs error detection behaviours
+-----------------
+flag_EXT2FS_ERRORS_CONTINUE : U16
+flag_EXT2FS_ERRORS_CONTINUE = 1
+
+flag_EXT2FS_ERRORS_RO : U16
+flag_EXT2FS_ERRORS_RO = 2
+
+flag_EXT2FS_ERRORS_PANIC : U16
+flag_EXT2FS_ERRORS_PANIC = 3
+
+flag_EXT2FS_ERRORS_DEFAULT : U16
+flag_EXT2FS_ERRORS_DEFAULT = flag_EXT2FS_ERRORS_CONTINUE
+
+
+----------------

@@ -1,0 +1,21 @@
+/*
+ * Copyright 2017, NICTA
+ *
+ * This software may be distributed and modified according to the terms of
+ * the GNU General Public License version 2. Note that NO WARRANTY is provided.
+ * See "LICENSE_GPLv2.txt" for details.
+ *
+ * @TAG(NICTA_GPL)
+ */
+
+struct _VfsInodeAbstract;             /* Defined in abstract.h */
+
+static int ext2fs_write_inode(struct inode *inode, struct writeback_control *wbc)
+{
+        return 0;
+}
+
+
+static void ext2fs_evict_inode(struct inode * inode)
+{
+}

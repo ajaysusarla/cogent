@@ -1,0 +1,73 @@
+--
+-- Copyright 2017, NICTA
+--
+-- This software may be distributed and modified according to the terms of
+-- the GNU General Public License version 2. Note that NO WARRANTY is provided.
+-- See "LICENSE_GPLv2.txt" for details.
+--
+-- @TAG(NICTA_GPL)
+--
+
+-- Log Level
+_COGENT_LOG_LEVEL: U32
+_COGENT_LOG_LEVEL = 0x0
+
+-- An abstract data type representing struct rw_semaphore
+type RWSemaphore
+
+-- An abstract data type representing rwlock_t
+type RWLock
+
+-- struct mutex
+type Mutex
+
+-- struct inode
+type Inode
+
+-- struct list_head
+type ListHead
+
+-- struct dquota
+type DQuota
+
+-- kuid_t
+type KUID
+
+-- kgid_t
+type KGID
+
+-- uid_t
+type UID
+
+-- gid_t
+type GID
+
+-- struct percpu_counter
+type PerCPUCounter
+
+-- struct blockgroup_lock
+type BlockGroupLock
+
+-- struct rb_root
+type RBRoot
+
+-- struct mb_cache
+type MBCache
+
+-- int
+type Int
+
+-- unsigned int
+type UInt
+
+-- u8 *
+type U8Ptr
+
+-- struct user_namespace
+type UserNameSpace
+
+-- void
+type CVoid
+
+-- loff_t
+type LOFF

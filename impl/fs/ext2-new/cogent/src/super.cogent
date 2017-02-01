@@ -1,0 +1,361 @@
+--
+-- Copyright 2017, NICTA
+--
+-- This software may be distributed and modified according to the terms of
+-- the GNU General Public License version 2. Note that NO WARRANTY is provided.
+-- See "LICENSE_GPLv2.txt" for details.
+--
+-- @TAG(NICTA_GPL)
+--
+
+include <gum/common/common.cogent>
+include <gum/common/log.cogent>
+
+include <gum/common/array.cogent>
+include <gum/common/uarray.cogent>
+include <gum/common/wordarray.cogent>
+
+include <gum/kernel/linux/bufferhead.cogent>
+
+-- ospage.cogent isn't included, because it includes 'vfs.cogent'
+--  from the standard path, which we currently don't want.
+--include <gum/ospage.cogent>
+
+include <gum/kernel/linux/errno.cogent>
+
+include "ext2fs.cogent"
+include "vfs.cogent"
+include "inode.cogent"
+
+-- util.cogent has definitions for the following:
+--   * _COGENT_LOG_LEVEL (needed by log.cogent).
+include "util.cogent"
+
+-- Types that are aliases(sort of) for C array
+-- These are embedded in a structure, these are specific to the superblock
+type TypeUUID
+type TypeVolumeName
+type TypeLastMounted
+type TypeSHashSeed
+type TypeSReserved
+type Ext2SBnBHAbstractType
+
+-- Ext2 Super block on disk
+type Ext2FSSuperBlock = {
+  s_inodes_count         : #LE32,
+  s_blocks_count         : #LE32,
+  s_r_blocks_count       : #LE32,
+  s_free_blocks_count    : #LE32,
+  s_free_inodes_count    : #LE32,
+  s_first_data_block     : #LE32,
+  s_log_block_size       : #LE32,
+  s_log_frag_size        : #LE32,
+  s_blocks_per_group     : #LE32,
+  s_frags_per_group      : #LE32,
+  s_inodes_per_group     : #LE32,
+  s_mtime                : #LE32,
+  s_wtime                : #LE32,
+  s_mnt_count            : #LE16,
+  s_max_mnt_count        : #LE16,
+  s_magic                : #LE16,
+  s_state                : #LE16,
+  s_errors               : #LE16,
+  s_minor_rev_level      : #LE16,
+  s_lastcheck            : #LE32,
+  s_checkinterval        : #LE32,
+  s_creator_os           : #LE32,
+  s_rev_lelve            : #LE32,
+  s_def_resuid           : #LE16,
+  s_def_resgid           : #LE16,
+  -- EXT2_DYNAMIC_REV superblock fields
+  s_first_ino            : #LE32,
+  s_inode_size           : #LE16,
+  s_block_group_nr       : #LE16,
+  s_feature_compat       : #LE32,
+  s_feature_incompat     : #LE32,
+  s_feature_ro_compat    : #LE32,
+  s_uuid                 : #TypeUUID,
+  s_volume_name          : #TypeVolumeName,
+  s_last_mounted         : #TypeLastMounted,
+  algorithm_usage_bitmap : #LE32,
+  -- Performance hints, EXT2_COMPAT_PREALLOC
+  s_prealloc_blocks      : U8,
+  s_prealloc_dir_blocks  : U8,
+  s_padding1             : U16,
+  -- Journaling Support - EXT3_FEATURE_COMPAT_HAS_JOURNAL
+  s_journal_uuid         : #TypeUUID,
+  s_journal_inum         : U32,
+  s_journal_dev          : U32,
+  s_last_orphan          : U32,
+  s_hash_seed            : #TypeSHashSeed,
+  s_def_hash_version     : U8,
+  s_reserved_char_pad    : U8,
+  s_reserved_word_pad    : U16,
+  s_default_mount_opts   : #LE32,
+  s_first_meta_bg        : #LE32,
+  s_reserved             : #TypeSReserved
+}
+
+type Ext2FSReserveWindowNode = {
+  bar : U32
+}
+
+-- Ext2 Super block data in memory
+type Ext2SbInfo = {
+  s_frag_size           : U64,
+  s_frags_per_block     : U64,
+  s_inodes_per_block    : U64,
+  s_frags_per_group     : U64,
+  s_blocks_per_group    : U64,
+  s_inodes_per_group    : U64,
+  s_itb_per_group       : U64,
+  s_gdb_count           : U64,
+  s_desc_per_block      : U64,
+  s_groups_count        : U64,
+  s_overhead_last       : U64,
+  s_blocks_last         : U64,
+  s_sbnbh               : #Ext2SBnBHAbstractType,
+  s_mount_opt           : U64,
+  sb_sb_block           : U64,
+  s_resuid              : #KUID,
+  s_resgid              : #KGID,
+  s_mount_state         : U16,
+  s_pad                 : U16,
+  s_addr_per_block_bits : #Int,
+  s_desc_per_block_bits : #Int,
+  s_inode_size          : #Int,
+  s_first_ino           : #Int,
+  s_next_gen_lock       : #SpinLock,
+  s_next_generation     : U32,
+  s_dir_count           : U64,
+  s_debts               : U8Ptr,
+  s_freeblocks_counter  : #PerCPUCounter,
+  s_freeinodes_counter  : #PerCPUCounter,
+  s_dirs_counter        : #PerCPUCounter,
+  s_blockgroup_lock     : BlockGroupLock,
+  s_rsv_window_lock     : #SpinLock,
+  s_rsv_window_root     : #RBRoot,
+  s_lock                : #SpinLock,
+  s_mb_cache            : MBCache
+}
+
+--
+-- Functions that are implemented in the C files, forward declared here.
+--
+ext2fs_super_is_writeable: VfsSuperBlock! -> Bool
+ext2fs_sync_fs_ac: (SysState, VfsSuperBlock) -> (SysState, VfsSuperBlock)
+ext2fs_xattr_create_cache: () -> MBCache
+ext2fs_xattr_destroy_cache: (SysState, MBCache) -> SysState
+ext2fs_sync_super: (SysState, VfsSuperBlock, Ext2SbInfo) -> (SysState, VfsSuperBlock, Ext2SbInfo)
+ext2fs_put_super_sync_fs_state: (SysState, Ext2SbInfo) -> (SysState, Ext2SbInfo)
+ext2fs_put_super_free_group_desc: (SysState, Ext2SbInfo) -> (SysState, Ext2SbInfo)
+ext2fs_put_super_free_sbh: (SysState, VfsSuperBlock, Ext2SbInfo) -> (SysState, VfsSuperBlock, Ext2SbInfo)
+ext2fs_fill_super_compute_block_and_offset_ac: (U64, U32, U32) -> (U64, U64)
+ext2fs_sbnbh_set_ses: (SysState, #Ext2SBnBHAbstractType, Ext2FSSuperBlock!) -> (SysState, #Ext2SBnBHAbstractType)
+ext2fs_sbnbh_new: (SysState) -> (SysState, #Ext2SBnBHAbstractType)
+ext2fs_sbnbh_ses_get_def_mount_opts: #Ext2SBnBHAbstractType -> U64
+ext2fs_sbnbh_ses_get_errors: #Ext2SBnBHAbstractType -> U16
+ext2fs_sbnbh_ses_get_def_resuid: #Ext2SBnBHAbstractType -> #UID
+ext2fs_sbnbh_ses_get_def_resgid: #Ext2SBnBHAbstractType -> #GID
+parse_options_ac: (SysState, CVoid!, U64, #KUID, #KGID) -> (SysState, U64, #KUID, #KGID)
+ext2fs_ndir_blocks_ac: () -> U64
+ext2fs_file_size_upper_limit: () -> U64
+
+--
+-- Wrappers for linux api
+--
+percpu_counter_destroy_ac: (SysState, #PerCPUCounter) -> (SysState, #PerCPUCounter)
+dquot_disable_ac: VfsSuperBlock -> VfsSuperBlock
+cpu_to_le16_ac: U16 -> #LE16
+brelse_ac: (SysState, BufferHead) -> SysState
+sb_min_blocksize_ac: (SysState, VfsSuperBlock!) -> RR SysState U32 ()
+block_size_ac: () -> U32
+max_lfs_filesize_ac: () -> U64
+ext2fs_super_magic_ac: () -> U16
+init_user_ns_ac: () -> UserNameSpace
+current_user_ns_ac: () -> UserNameSpace
+make_kuid_ac: (UserNameSpace, #UID) -> #KUID
+make_kgid_ac: (UserNameSpace, #GID) -> #KGID
+
+--
+-- Memory management functions
+--
+newExt2SbInfo: SysState -> RR SysState (Ext2SbInfo take (..)) ErrCode
+freeExt2SbInfo: (SysState, Ext2SbInfo take (..)) -> SysState
+newBlockGroupLock: SysState -> R (SysState, BlockGroupLock) SysState
+freeBlockGroupLock: (SysState, BlockGroupLock) -> SysState
+newU8Ptr: (SysState, U32) -> R (SysState, U8Ptr) SysState
+freeU8Ptr: (SysState, U8Ptr) -> SysState
+
+--
+-- Utility functions
+--
+two_power_cg: U32 -> U64
+two_power_cg bits = 1 << u32_to_u64 bits
+
+--
+-- EXT2 functions
+--
+
+-- ext2fs_write_super_cg
+-- Write super block if it is writable, do nothing otherwise.
+ext2fs_write_super_cg: (SysState, VfsSuperBlock) -> (SysState, VfsSuperBlock, Bool)
+ext2fs_write_super_cg (st, sb) =
+  ext2fs_super_is_writeable sb !sb
+  | True => let (st, sb) = ext2fs_sync_fs_ac (st, sb) in
+            (st, sb, True)                   -- => results in path being marked 'likely'
+  | False -> (st, sb, False)                 -- -> results in path being marked 'unlikely'
+
+
+-- ext2fs_put_super_cg
+-- Drop a temporary reference to ext2fs' superblock, free superblock if there are no
+-- references left.
+ext2fs_put_super_cg: (SysState, Ext2SbInfo, VfsSuperBlock) -> (SysState, VfsSuperBlock)
+ext2fs_put_super_cg (st, sbi, sb) =
+  let sb = dquot_disable_ac sb
+  and (st, sb, sbi) = if ext2fs_super_is_writeable sb !sb then
+                      let (st, sbi) = ext2fs_put_super_sync_fs_state (st, sbi)
+                      in ext2fs_sync_super (st, sb, sbi)
+                      else (st, sb, sbi)
+  and (st, sbi) = let (st, sbi) = ext2fs_put_super_free_group_desc (st, sbi)
+                  and sbi {s_freeblocks_counter, s_freeinodes_counter, s_dirs_counter} = sbi
+                  and (st, s_freeblocks_counter) = percpu_counter_destroy_ac (st, s_freeblocks_counter)
+                  and (st, s_freeinodes_counter) = percpu_counter_destroy_ac (st, s_freeinodes_counter)
+                  and (st, s_dirs_counter) = percpu_counter_destroy_ac (st, s_dirs_counter)
+                  in (st, sbi {s_freeblocks_counter, s_freeinodes_counter, s_dirs_counter})
+  and (st, sb, sbi) = ext2fs_put_super_free_sbh (st, sb, sbi)
+  and (st, sbi) = let sbi {s_debts, s_blockgroup_lock, s_mb_cache} = sbi
+                  and st = ext2fs_xattr_destroy_cache (st, s_mb_cache)
+                  and st = freeU8Ptr (st, s_debts)
+                  and st = freeBlockGroupLock (st, s_blockgroup_lock)
+                  in (st, sbi)
+  and sbi {..} = sbi
+  and st = freeExt2SbInfo (st, sbi)
+  in (st, sb)
+
+
+-- ext2fs_get_bh_of_sb_cg
+-- Given VfsSuperBlock, this function computes the logical block number
+-- and the offset and also returns the buffer head that contains the superblock
+-- Returns:
+--        * Success : SysState and (BufferHead, logic_sb_block, offset)
+--        * Error   : SysState and ()
+ext2fs_get_bh_of_sb_cg: (SysState, VfsSuperBlock!, U64) -> RR SysState (BufferHead, U64, U64) ()
+ext2fs_get_bh_of_sb_cg (st, sb, sb_block) =
+  let (st, result) = sb_min_blocksize_ac (st, sb)
+  in result
+  | Success min_blocksize ->
+     let (st, result) = buffer_head_new st
+     in result
+     | Success bh ->
+        let bsize_kernel = block_size_ac ()
+        and (logic_sb_block, offset) =
+          if min_blocksize /= bsize_kernel then
+          (sb_block * u32_to_u64 min_blocksize / u32_to_u64 bsize_kernel,
+           sb_block * u32_to_u64 min_blocksize % u32_to_u64 bsize_kernel)
+          else (sb_block, 0)
+        and ((st, bh), result)  = buffer_head_read_block #{st, sb, bh, blknr = logic_sb_block}
+        in result
+        | Success () -> (st, Success (bh, logic_sb_block, offset))
+        | Error () -> (buffer_head_free (st, bh), Error ())
+     | Error () -> (st, Error ())
+  | Error () -> (st, Error ())
+
+
+-- ext2fs_max_size
+-- Maximal file size.  There is a direct, and {,double-,triple-}indirect
+-- block limit, and also a limit of (2^32 - 1) 512-byte sectors in i_blocks.
+-- We need to be 1 filesystem block less than the 2^32 sector limit.
+--
+-- This is the Cogent implementation of the ext2_max_size() in linux/fs/ext2/super.c
+-- TODO: This function actually needs to return #LOFF, but the arithmetic doesn't work with
+-- that type, so using and returning U64 instead. Fix that somehow.
+ext2fs_max_size: U32 -> U64
+ext2fs_max_size bits =
+  -- This is calculated to be the largest file size for a
+  -- dense, file such that the total number of
+  -- sectors in the file, including data and all indirect blocks,
+  -- does not exceed 2^32 -1
+  -- __u32 i_blocks representing the total number of 512 bytes blocks of the file
+  let upper_limit = ext2fs_file_size_upper_limit () >> u32_to_u64 (bits - 9)   -- total blocks in file system block size
+  -- indirect blocks
+  and meta_blocks:U64 = 1
+  -- double indirect blocks
+  and meta_blocks = meta_blocks + 1 + two_power_cg (bits - 2)
+  -- triple indirect blocks
+  and meta_blocks = meta_blocks + 1 + two_power_cg (bits - 2) + two_power_cg (2 * (bits-2))
+  and upper_limit = (upper_limit - meta_blocks) << u32_to_u64 bits
+  and res = ((((ext2fs_ndir_blocks_ac () + two_power_cg (bits - 2))
+            + two_power_cg (bits - 2))
+            + two_power_cg (2 * (bits - 2)))
+            + two_power_cg (3 * (bits - 2))) << u32_to_u64 bits
+  and res = if res > upper_limit then upper_limit
+            else res
+  and res = if res > max_lfs_filesize_ac () then max_lfs_filesize_ac ()
+            else res
+  in res
+
+
+-- ext2fs_fill_super_set_default_mnt_opts:
+-- Set the default mount options for Ext2SbInfo
+ext2fs_sbinfo_set_default_mnt_opts : (SysState, ((Ext2SbInfo take (..)) put (s_sbnbh))) -> (SysState, ((Ext2SbInfo take (..)) put (s_sbnbh, s_mount_opt, s_resuid, s_resgid)))
+ext2fs_sbinfo_set_default_mnt_opts (st, sbi) =
+  let sbi {s_sbnbh} = sbi
+  and def_mnt_opts = ext2fs_sbnbh_ses_get_def_mount_opts s_sbnbh
+  and s_mount_opt : U64  = 0
+  and s_mount_opt = if (def_mnt_opts .&. u16_to_u64 flag_EXT2FS_DEFM_DEBUG) /= 0 then
+                    s_mount_opt .|. u32_to_u64 flag_EXT2FS_MOUNT_DEBUG
+                    else s_mount_opt
+  and s_mount_opt = if (def_mnt_opts .&. u16_to_u64 flag_EXT2FS_DEFM_BSDGROUPS) /= 0 then
+                    s_mount_opt .|. u32_to_u64 flag_EXT2FS_MOUNT_GRPID
+                    else s_mount_opt
+  and s_mount_opt = if (def_mnt_opts .&. u16_to_u64 flag_EXT2FS_DEFM_UID16) /= 0 then
+                    s_mount_opt .|. u32_to_u64 flag_EXT2FS_MOUNT_NO_UID32
+                    else s_mount_opt
+  -- if CONFIG_EXT2_FS_XATTR
+  and s_mount_opt = if (def_mnt_opts .&. u16_to_u64 flag_EXT2FS_DEFM_XATTR_USER) /= 0 then
+                    s_mount_opt .|. u32_to_u64 flag_EXT2FS_MOUNT_XATTR_USER
+                    else s_mount_opt
+  -- endif
+  -- if CONFIG_EXT2_FS_POSIX_ACL
+  and s_mount_opt = if (def_mnt_opts .&. u16_to_u64 flag_EXT2FS_DEFM_ACL) /= 0 then
+                    s_mount_opt .|. u32_to_u64 flag_EXT2FS_MOUNT_POSIX_ACL
+                    else s_mount_opt
+  -- endif
+  -- error behaviour flags
+  and s_errors = ext2fs_sbnbh_ses_get_errors s_sbnbh
+  and s_mount_opt = if (s_errors == flag_EXT2FS_ERRORS_PANIC) then
+                    s_mount_opt .|. u32_to_u64 flag_EXT2FS_MOUNT_ERRORS_PANIC
+                    else if (s_errors == flag_EXT2FS_ERRORS_CONTINUE) then
+                    s_mount_opt .|. u32_to_u64 flag_EXT2FS_MOUNT_ERRORS_CONT
+                    else
+                    s_mount_opt .|. u32_to_u64 flag_EXT2FS_MOUNT_ERRORS_RO
+  -- resuid and resgid
+  and s_resuid = make_kuid_ac (init_user_ns_ac (), ext2fs_sbnbh_ses_get_def_resuid s_sbnbh)
+  and s_resgid = make_kgid_ac (init_user_ns_ac (), ext2fs_sbnbh_ses_get_def_resgid s_sbnbh)
+  and s_mount_opt = s_mount_opt .|. u32_to_u64 flag_EXT2FS_MOUNT_RESERVATION
+  in (st, sbi {s_sbnbh, s_mount_opt, s_resuid, s_resgid})
+
+
+-- ext2fs_fill_super_cg
+-- TODO: The signature needs to be:
+--    ext2fs_fill_super_cg: SysState -> RR SysState Ext2SbInfo ErrCode
+--    (no take (..))
+-- ext2fs_fill_super_cg: (SysState, Ext2FSSuperBlock!) -> RR SysState (Ext2SbInfo)ErrCode
+ext2fs_fill_super_cg: (SysState, VfsSuperBlock, Ext2FSSuperBlock!, CVoid!) -> RR (SysState, VfsSuperBlock) ((Ext2SbInfo take (..)) put (s_sbnbh, s_mount_opt, s_resuid, s_resgid)) ErrCode
+ext2fs_fill_super_cg (st, sb, es, opts)=
+  let (st, sbi) = newExt2SbInfo st
+  in sbi
+  | Success sbi ->
+     let (st, s_sbnbh) = ext2fs_sbnbh_new st
+     and (st, s_sbnbh) = ext2fs_sbnbh_set_ses (st, s_sbnbh, es)
+     and sbi = sbi {s_sbnbh}
+     and (st, sbi) = ext2fs_sbinfo_set_default_mnt_opts (st, sbi)
+     -- set the options that have been passed in when mounting
+     and (st, sbi) =
+         let sbi {s_mount_opt, s_resuid, s_resgid} = sbi
+         and (st, s_mount_opt, s_resuid, s_resgid) = parse_options_ac (st, opts, s_mount_opt, s_resuid, s_resgid)
+         in (st, sbi {s_mount_opt, s_resuid, s_resgid})
+     in ((st, sb), Success sbi)
+  | Error err -> ((st, sb), Error err)
+

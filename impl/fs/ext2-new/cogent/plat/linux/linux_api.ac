@@ -1,0 +1,94 @@
+/*
+ * Copyright 2017, NICTA
+ *
+ * This software may be distributed and modified according to the terms of
+ * the GNU General Public License version 2. Note that NO WARRANTY is provided.
+ * See "LICENSE_GPLv2.txt" for details.
+ *
+ * @TAG(NICTA_GPL)
+ */
+
+/*
+  This file contains wrappers for various linux kernel api calls that we need
+  to make from Cogent code.
+ */
+
+struct super_block *dquot_disable_ac(struct super_block *sb)
+{
+        dquot_disable(sb, -1,  DQUOT_USAGE_ENABLED | DQUOT_LIMITS_ENABLED);
+
+        return sb;
+}
+
+$ty:((SysState, #PerCPUCounter)) percpu_counter_destroy_ac($ty:((SysState, #PerCPUCounter)) args)
+{
+        percpu_counter_destroy(&args.p2);
+
+        return args;
+}
+
+inline $ty:(#LE16) cpu_to_le16_ac($ty:(U16) p)
+{
+        return cpu_to_le16(p);
+}
+
+inline $ty:(SysState) brelse_ac($ty:((SysState, BufferHead)) args)
+{
+        brelse(args.p2);
+
+        return args.p1;
+}
+
+inline $ty:(RR SysState U32 ()) sb_min_blocksize_ac($ty:((SysState, VfsSuperBlock!)) args)
+{
+        $ty:(RR SysState U32 ()) ret;
+        $ty:(U32) bsize;
+
+        ret.p1 = args.p1;
+        /* BLOCK_SIZE is defined in the kernel */
+        bsize = sb_min_blocksize(args.p2, BLOCK_SIZE);
+        if (!bsize) {
+                ret.p2.tag = TAG_ENUM_Error;
+        } else {
+                ret.p2.tag = TAG_ENUM_Success;
+                ret.p2.Success = bsize;
+        }
+
+
+        return ret;
+}
+
+inline $ty:(U32) block_size_ac($ty:(()) arg)
+{
+        return BLOCK_SIZE;
+}
+
+inline $ty:(U64) max_lfs_filesize_ac($ty:(()) arg)
+{
+        return MAX_LFS_FILESIZE;
+}
+
+inline $ty:(U16) ext2fs_super_magic_ac($ty:(()) arg)
+{
+        return EXT2_SUPER_MAGIC;
+}
+
+inline $ty:(UserNameSpace) init_user_ns_ac($ty:(()) arg)
+{
+        return &init_user_ns;
+}
+
+inline $ty:(UserNameSpace) current_user_ns_ac($ty:(()) arg)
+{
+        return current_user_ns();
+}
+
+inline $ty:(#KUID) make_kuid_ac ($ty:((UserNameSpace, #UID)) args)
+{
+        return make_kuid(args.p1, args.p2);
+}
+
+inline $ty:(#KGID) make_kgid_ac ($ty:((UserNameSpace, #GID)) args)
+{
+        return make_kgid(args.p1, args.p2);
+}

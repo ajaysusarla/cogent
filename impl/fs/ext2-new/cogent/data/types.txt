@@ -1,0 +1,20 @@
+-- These are types defined in cogent-defns.h
+u8
+u16
+u32
+u64
+unit_t
+bool_t
+
+-- These are defined in the linux kernel headers
+size_t
+ssize_t
+loff_t
+poll_table
+fl_owner_t
+sector_t
+substring_t
+kuid_t
+kgid_t
+
+-- The following are defined in abstract.h

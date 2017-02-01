@@ -1,0 +1,77 @@
+--
+-- Copyright 2017, NICTA
+--
+-- This software may be distributed and modified according to the terms of
+-- the GNU General Public License version 2. Note that NO WARRANTY is provided.
+-- See "LICENSE_GPLv2.txt" for details.
+--
+-- @TAG(NICTA_GPL)
+--
+
+include "util.cogent"
+
+type Ext2FSInodeOSD1 = U32
+type Ext2FSInodeOSD2 = (U64,U32)
+
+-- The Inode structure for ext2fs
+-- This is the on-disk representation
+type Ext2FSInode = {
+  i_mode        : U16,
+  i_uid         : U16,
+  i_size        : U32,
+  i_atime       : U32,
+  i_ctime       : U32,
+  i_mtime       : U32,
+  i_dtime       : U32,
+  i_gid         : U16,
+  i_links_count : U16,
+  i_blocks      : U32,
+  i_flags       : U32,
+  osd1          : Ext2FSInodeOSD1, -- union
+  i_block       : U64, --array
+  i_generation  : U32,
+  i_file_acl    : U32,
+  i_dir_acl     : U32,
+  i_faddr       : U32,
+  osd2          : Ext2FSInodeOSD2 -- union
+}
+
+type Ext2FSBlockAllocInfo = U64
+-- The in-memory representation of ext2's inode.
+type FsInode = {
+  i_data             : U32, -- This needs to be an array: __le32  i_data[15];
+  i_flags            : U32,
+  i_faddr            : U32,
+  i_frag_no          : U8,
+  i_frag_size        : U8,
+  i_state            : U16,
+  i_file_acl         : U32,
+  i_dir_acl          : U32,
+  i_dtime            : U32,
+  i_block_group      : U32,
+  i_block_alloc_info : Ext2FSBlockAllocInfo,
+  i_dir_start_lookup : U32,
+  -- #ifdef CONFIG_EXT2_FS_XATTR
+  xattr_sem          : #RWSemaphore,
+  -- #endif
+  i_meta_lock        : #RWLock,
+  -- #ifdef CONFIG_FS_DAX
+  dax_sem            : #RWSemaphore,
+  -- #endif
+  truncate_mutex     : #Mutex,
+  vfs_inode          : #Inode,
+  i_orphan           : #ListHead,
+  -- #ifdef CONFIG_QUOTA
+  i_dquota           : DQuota
+  -- #endif
+}
+
+
+-- The FsState structure, that is needed/used by VFS(vfs.cogent)
+-- This structure is carried around and is needed by all functions
+type FsState = {
+  flags : U32
+}
+
+newVfsInode: SysState -> R (SysState, VfsInode take (..)) SysState
+freeVfsInode: (SysState, VfsInode take (..)) -> SysState
