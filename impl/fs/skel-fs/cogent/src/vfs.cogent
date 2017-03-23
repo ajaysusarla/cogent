@@ -12,9 +12,9 @@
 --   *
 -- TODO: List reasons here.
 
-include <gum/wordarray.cogent>
-include <gum/stat.cogent>
-include <gum/os.cogent>
+include <gum/common/wordarray.cogent>
+include <gum/fs/linux/stat.cogent>
+include <gum/kernel/linux/os.cogent>
 
 ----------------------------
 -- The abstract inode structure
@@ -254,19 +254,19 @@ vfs_default_set_acl: VfsISetAclArgs -> VfsISetAclResult
 
 
 type VfsInodeOperations = #{
-  lookup: Option ((#{ex: ExState, state: FsState, parent_inode: VfsInode, name: CString!, flags: VfsFlags}) -> RR #{ex: ExState, state: FsState, parent_inode: VfsInode} VfsInode U32),
+  lookup: Option ((#{ex: SysState, state: FsState, parent_inode: VfsInode, name: CString!, flags: VfsFlags}) -> RR #{ex: SysState, state: FsState, parent_inode: VfsInode} VfsInode U32),
   get_link: Option (VfsIGetLinkArgs -> VfsIGetLinkResult),
   permission: Option (VfsIPermissionArgs -> VfsIPermissionResult),
   get_acl: Option (VfsIGetAclArgs -> VfsIGetAclResult),
   readlink: Option(VfsIReadLinkArgs -> VfsIReadLinkResult),
-  create: Option ((ExState, FsState, VfsInode, CString!, VfsMode) -> RR (ExState, FsState, VfsInode) VfsInode U32),
-  link: Option ((ExState, FsState, VfsInode, VfsInode, CString!) -> RR (ExState, FsState, VfsInode, VfsInode) () U32),
-  unlink: Option ((ExState, FsState, VfsInode, VfsInode, CString!) -> RR (ExState, FsState, VfsInode, VfsInode) () U32),
-  symlink: Option ((ExState, FsState, VfsInode, CString!) -> RR (ExState, FsState, VfsInode) VfsInode U32),
-  mkdir: Option ((ExState, FsState, VfsInode, CString!, VfsMode) -> RR (ExState, FsState, VfsInode) VfsInode U32),
-  rmdir: Option ((ExState, FsState, VfsInode, VfsInode, CString!) -> RR (ExState, FsState, VfsInode, VfsInode) () U32),
-  mknod: Option ((ExState, FsState, VfsInode, CString!, VfsMode, #VfsDevice) -> RR (ExState, FsState, VfsInode) VfsInode U32),
-  rename: Option ((ExState, FsState, VfsRenameContext) -> RR (ExState, FsState, VfsRenameContext) () U32),
+  create: Option ((SysState, FsState, VfsInode, CString!, VfsMode) -> RR (SysState, FsState, VfsInode) VfsInode U32),
+  link: Option ((SysState, FsState, VfsInode, VfsInode, CString!) -> RR (SysState, FsState, VfsInode, VfsInode) () U32),
+  unlink: Option ((SysState, FsState, VfsInode, VfsInode, CString!) -> RR (SysState, FsState, VfsInode, VfsInode) () U32),
+  symlink: Option ((SysState, FsState, VfsInode, CString!) -> RR (SysState, FsState, VfsInode) VfsInode U32),
+  mkdir: Option ((SysState, FsState, VfsInode, CString!, VfsMode) -> RR (SysState, FsState, VfsInode) VfsInode U32),
+  rmdir: Option ((SysState, FsState, VfsInode, VfsInode, CString!) -> RR (SysState, FsState, VfsInode, VfsInode) () U32),
+  mknod: Option ((SysState, FsState, VfsInode, CString!, VfsMode, #VfsDevice) -> RR (SysState, FsState, VfsInode) VfsInode U32),
+  rename: Option ((SysState, FsState, VfsRenameContext) -> RR (SysState, FsState, VfsRenameContext) () U32),
   setattr: Option (VfsISetAttrArgs -> VfsISetAttrResult),
   getattr: Option (VfsIGetAttrArgs -> VfsIGetAttrResult),
   listxattr: Option (VfsIListXAttrArgs -> VfsIListXAttrResult),
@@ -398,10 +398,10 @@ type VfsFileOperations = #{
   llseek: Option (VfsFLlSeekArgs -> VfsFLlSeekResult),
   read: Option (VfsFReadArgs -> VfsFReadResult),
   write: Option (VfsFWriteArgs -> VfsFWriteResult),
-  read_iterate: Option ((#{ex: ExState, state: FsState, parent_inode: VfsInode, dirctx: VfsDirContext}) -> RR #{ex: ExState, state: FsState, parent_inode: VfsInode, dirctx: VfsDirContext} () U32),
-  write_iterate: Option ((#{ex: ExState, state: FsState, parent_inode: VfsInode, dirctx: VfsDirContext}) -> RR #{ex: ExState, state: FsState, parent_inode: VfsInode, dirctx: VfsDirContext} () U32),
-  iterate: Option ((#{ex: ExState, state: FsState, parent_inode: VfsInode, dirctx: VfsDirContext}) -> RR #{ex: ExState, state: FsState, parent_inode: VfsInode, dirctx: VfsDirContext} () U32),
-  iterate_shared: Option ((#{ex: ExState, state: FsState, parent_inode: VfsInode, dirctx: VfsDirContext}) -> RR #{ex: ExState, state: FsState, parent_inode: VfsInode, dirctx: VfsDirContext} () U32),
+  read_iterate: Option ((#{ex: SysState, state: FsState, parent_inode: VfsInode, dirctx: VfsDirContext}) -> RR #{ex: SysState, state: FsState, parent_inode: VfsInode, dirctx: VfsDirContext} () U32),
+  write_iterate: Option ((#{ex: SysState, state: FsState, parent_inode: VfsInode, dirctx: VfsDirContext}) -> RR #{ex: SysState, state: FsState, parent_inode: VfsInode, dirctx: VfsDirContext} () U32),
+  iterate: Option ((#{ex: SysState, state: FsState, parent_inode: VfsInode, dirctx: VfsDirContext}) -> RR #{ex: SysState, state: FsState, parent_inode: VfsInode, dirctx: VfsDirContext} () U32),
+  iterate_shared: Option ((#{ex: SysState, state: FsState, parent_inode: VfsInode, dirctx: VfsDirContext}) -> RR #{ex: SysState, state: FsState, parent_inode: VfsInode, dirctx: VfsDirContext} () U32),
   poll: Option (VfsFPollArgs -> VfsFPollResult),
   unlocked_ioctl: Option (VfsFUnlockedIoctlArgs -> VfsFUnlockedIoctlResult),
   compat_ioctl: Option (VfsFCompatIoctlArgs -> VfsFCompatIoctlResult),
