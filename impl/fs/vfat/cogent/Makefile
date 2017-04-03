@@ -109,7 +109,7 @@ else
 
 PWD:= $(shell pwd)
 
-.PHONY: default cogent clean .c-gen .verif-gen verification
+.PHONY: default cogent clean .c-gen .verif-gen verification pkg-c-code
 
 default: linux
 
@@ -119,7 +119,7 @@ all: .c-gen $(OBJ)
 %.c:
 	$(Q)$(CC) -c $@
 
-# generate executable C cod
+# generate executable C code
 # NOTE: We run cpp with in c99 mode, as the default mode that cpp runs in is gnu99,
 #       which has an issue when parsing. It replaces anything 'linux' with a '1'.
 #       More details here: http://stackoverflow.com/questions/19210935/why-does-the-c-preprocessor-interpret-the-word-linux-as-the-constant-1
@@ -139,6 +139,17 @@ all: .c-gen $(OBJ)
 		--proof-name=$(PROOF_ID) \
 		--proof-input-c="wrapper_pp_inferred.c"
 
+# Package the generated C code as a buildable kernel module.
+pkg-c-code: .c-gen
+	$(Q)mkdir -p vfat-src
+	$(Q)cp plat/linux/*.c vfat-src/
+	$(Q)cp plat/linux/*.h vfat-src/
+	$(Q)cp lib/wraphead.h vfat-src/
+	$(Q)cp $(STDGUM)/cogen-defns.h vfat-src/
+	$(Q)cp data/Makefile.kernel vfat-src/Makefile
+	$(Q)sed -i -e 's/plat\/linux\///g' vfat-src/module.c
+	$(Q)tar cvzf vfat-`date +%Y.%m.%d`.tgz vfat-src/ && rm -rf vfat-src
+
 # compile Linux kernel module for file system
 linux: .c-gen
 	make -C  $(KERNELDIR) CFLAGS="$(CFLAGS)" EXTRA_CFLAGS="-std=gnu99 $(EXTRA_CFLAGS)" M=$(PWD) modules
@@ -157,13 +168,14 @@ clean:
 	$(Q) rm -f $(RTMPPPC)
 	$(Q) rm -f $(MODULE).mod.[co] $(MODULE).o $(MODULE).ko Module.symvers modules.order
 	$(Q) rm -f abstract/*.h
+	$(Q) rm -rf kernel-src/
 	$(Q) rm -rf *.thy ROOT generated.table BUILD_INFO
 	$(Q) find . -name *.thy -exec rm -f {} \;
 	$(Q) find . -name ROOT -exec rm -f {} \;
 	$(Q) find . -name BUILD_INFO -exec rm -f {} \;
 	$(Q) find . -name *_pp* -exec rm -f {} \;
 	$(Q) find . -name generated.* -exec rm -f {} \;
-	$(Q)find . -name *.cmd -exec rm -f {} \;
+	$(Q) find . -name *.cmd -exec rm -f {} \;
 
 help:
 	$(E) "** Cogent vfat build help **"

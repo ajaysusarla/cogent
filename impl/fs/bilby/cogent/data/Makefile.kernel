@@ -1,0 +1,28 @@
+#
+# Copyright 2017, NICTA
+#
+# This software may be distributed and modified according to the terms of
+# the GNU General Public License version 2. Note that NO WARRANTY is provided.
+# See "LICENSE_GPLv2.txt" for details.
+#
+# @TAG(NICTA_GPL)
+#
+
+obj-m += cg-bilbyfs.o
+
+cg-bilbyfs-y := generated.o array_pp_inferred.o common_pp_inferred.o crc32_pp_inferred.o list_pp_inferred.o module.o rbt.o os_pp_inferred.o rbt_pp_inferred.o wordarray_pp_inferred.o
+
+EXTRA_CFLAGS=-I$(PWD)
+
+all: cogent_bilbyfs_module
+
+ifndef KHEAD
+KHEAD:= /lib/modules/$(shell uname -r)/build
+endif
+
+cogent_bilbyfs_module:
+	echo "DIR   $(PWD)"
+	make -C $(KHEAD) M=$(PWD) modules
+
+clean:
+	make -C $(KHEAD) M=$(PWD) clean

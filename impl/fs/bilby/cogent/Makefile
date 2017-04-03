@@ -142,6 +142,17 @@ all: .c-gen $(OBJ)
                 --proof-name=$(PROOF_ID) \
                 --proof-input-c="wrapper_pp_inferred.c"
 
+# Package the generated C code as a buildable kernel module.
+pkg-c-code: .c-gen
+	$(Q)mkdir -p bilby-src
+	$(Q)cp plat/linux/*.c bilby-src/
+	$(Q)cp plat/linux/*.h bilby-src/
+	$(Q)cp -r abstract bilby-src/
+	$(Q)cp lib/* bilby-src/
+	$(Q)cp $(STDGUM)/cogent-defns.h bilby-src/
+	$(Q)cp data/Makefile.kernel bilby-src/Makefile
+	$(Q)sed -i -e 's/plat\/linux\///g' bilby-src/module.c
+	$(Q)tar cvzf bilby-`date +%Y.%m.%d`.tgz bilby-src/ && rm -rf bilby-src
 
 # compile Linux kernel module for file system
 linux: .c-gen
