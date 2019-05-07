@@ -1,0 +1,79 @@
+--
+-- Copyright 2019, Data61
+-- Commonwealth Scientific and Industrial Research Organisation (CSIRO)
+-- ABN 41 687 119 230.
+--
+-- This software may be distributed and modified according to the terms of
+-- the GNU General Public License version 2. Note that NO WARRANTY is provided.
+-- See "LICENSE_GPLv2.txt" for details.
+--
+-- @TAG(DATA61_GPL)
+--
+
+cogent_LOG_LEVEL: U32
+cogent_LOG_LEVEL = 0x0
+
+-- -----------------------------------------------------------------------------
+-- debug log functions
+-- -----------------------------------------------------------------------------
+
+{-# cinline cogent_log2 #-}
+{-# fnmacro cogent_log2 #-}
+cogent_log2: U32 -> U32
+
+cogent_assert: Bool -> ()
+
+cogent_warn: String -> ()
+cogent_warn_u32: U32 -> ()
+cogent_warn_u64: U64 -> ()
+
+cogent_warn_u16: U16 -> ()
+cogent_warn_u16 x = cogent_warn_u32 (upcast x)
+
+cogent_debug: String -> ()
+cogent_debug_u64: U64 -> ()
+cogent_debug_u64_hex: U64 -> ()
+cogent_debug_u32: U32 -> ()
+cogent_debug_u32_hex: U32 -> ()
+cogent_debug_u32_oct: U32 -> ()
+-- This can't be implemented in Cogent because the formalisation doesn't support string literals.
+-- Usually we would #ifdef it out, but because it's in the standard library #ifdef DEBUG doesn't work.
+cogent_debug_bool: Bool -> ()
+
+cogent_debug_u16: U16 -> ()
+cogent_debug_u16 x = cogent_debug_u32 (upcast x)
+
+cogent_debug_u8: U8 -> ()
+cogent_debug_u8 x = cogent_debug_u32 (upcast x)
+
+
+cogent_log: (U32, String) -> ()
+cogent_log (l, x) = if cmp_log_lvl l then cogent_debug x else ()
+
+cogent_log_u64: (U32, U64) -> ()
+cogent_log_u64 (l, x) = if cmp_log_lvl l then cogent_debug_u64 x else ()
+
+cogent_log_u64_hex: (U32, U64) -> ()
+cogent_log_u64_hex (l, x) = if cmp_log_lvl l then cogent_debug_u64_hex x else ()
+
+cogent_log_u32: (U32, U32) -> ()
+cogent_log_u32 (l, x) = if cmp_log_lvl l then cogent_debug_u32 x else ()
+
+cogent_log_u32_hex: (U32, U32) -> ()
+cogent_log_u32_hex (l, x) = if cmp_log_lvl l then cogent_debug_u32_hex x else ()
+
+cogent_log_u32_oct: (U32, U32) -> ()
+cogent_log_u32_oct (l, x) = if cmp_log_lvl l then cogent_debug_u32_oct x else ()
+
+cogent_log_bool: (U32, Bool) -> ()
+cogent_log_bool (l, bool) = if cmp_log_lvl l then cogent_debug_bool (bool) else ()
+
+cogent_log_u16: (U32, U16) -> ()
+cogent_log_u16 (l, x) = cogent_log_u32 (l, upcast x)
+
+cogent_log_u8: (U32, U8) -> ()
+cogent_log_u8 (l, x) = cogent_log_u32 (l, upcast x)
+
+cmp_log_lvl : U32 -> Bool
+cmp_log_lvl l = (l .&. cogent_LOG_LEVEL) /= 0
+
